@@ -1,0 +1,844 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Career180 Meta Ads</title>
+<style>
+:root {
+  color-scheme: light;
+  --page: #f9f9f7;
+  --surface: #fcfcfb;
+  --surface-2: #f3f2ee;
+  --ink: #0b0b0b;
+  --ink-2: #52514e;
+  --muted: #898781;
+  --grid: #e1e0d9;
+  --axis: #c3c2b7;
+  --ring: rgba(11, 11, 11, 0.10);
+  --s1: #2a78d6;
+  --s2: #eb6834;
+  --s3: #1baf7a;
+  --s1-wash: rgba(42, 120, 214, 0.10);
+  --prev: #b9b8b1;
+  --good: #006300;
+  --bad: #d03b3b;
+  --warn-bg: #fff4d6;
+  --warn-ink: #6b4a00;
+  --accent: #2a78d6;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --page: #0d0d0d;
+    --surface: #1a1a19;
+    --surface-2: #232321;
+    --ink: #f0efec;
+    --ink-2: #c3c2b7;
+    --muted: #898781;
+    --grid: #2c2c2a;
+    --axis: #383835;
+    --ring: rgba(255, 255, 255, 0.10);
+    --s1: #3987e5;
+    --s2: #d95926;
+    --s3: #199e70;
+    --s1-wash: rgba(57, 135, 229, 0.12);
+    --prev: #5a5955;
+    --good: #0ca30c;
+    --bad: #e66767;
+    --warn-bg: #3a2f12;
+    --warn-ink: #f3d48a;
+    --accent: #3987e5;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --page: #0d0d0d;
+  --surface: #1a1a19;
+  --surface-2: #232321;
+  --ink: #f0efec;
+  --ink-2: #c3c2b7;
+  --muted: #898781;
+  --grid: #2c2c2a;
+  --axis: #383835;
+  --ring: rgba(255, 255, 255, 0.10);
+  --s1: #3987e5;
+  --s2: #d95926;
+  --s3: #199e70;
+  --s1-wash: rgba(57, 135, 229, 0.12);
+  --prev: #5a5955;
+  --good: #0ca30c;
+  --bad: #e66767;
+  --warn-bg: #3a2f12;
+  --warn-ink: #f3d48a;
+  --accent: #3987e5;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--page);
+  color: var(--ink);
+  font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+.wrap { max-width: 1280px; margin: 0 auto; padding: 24px 16px 48px; }
+@media (min-width: 720px) { .wrap { padding: 32px 28px 64px; } }
+
+header.top { display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: flex-end; justify-content: space-between; margin-bottom: 20px; }
+header.top h1 { font-size: 22px; line-height: 1.2; margin: 0; font-weight: 650; letter-spacing: -0.01em; }
+header.top .sub { color: var(--ink-2); margin-top: 4px; font-size: 13px; }
+.top-right { display: flex; gap: 8px; align-items: center; }
+.pill { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; padding: 3px 9px; border-radius: 999px; background: var(--surface-2); color: var(--ink-2); white-space: nowrap; }
+.pill.warn { background: var(--warn-bg); color: var(--warn-ink); }
+button.icon { border: 1px solid var(--ring); background: var(--surface); color: var(--ink-2); border-radius: 8px; height: 32px; padding: 0 10px; cursor: pointer; font: inherit; font-size: 13px; }
+button.icon:hover { color: var(--ink); }
+
+.filters { display: flex; flex-wrap: wrap; gap: 10px 12px; align-items: end; margin-bottom: 20px; }
+.field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.field > span { font-size: 12px; color: var(--muted); }
+select, input[type="date"] {
+  font: inherit; font-size: 13px; color: var(--ink); background: var(--surface);
+  border: 1px solid var(--ring); border-radius: 8px; height: 34px; padding: 0 10px; max-width: 100%;
+}
+select:focus-visible, input:focus-visible, button:focus-visible, th[tabindex]:focus-visible, tr[tabindex]:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.field.campaign select { width: 280px; }
+#custom-range { display: none; gap: 8px; }
+#custom-range.on { display: flex; }
+@media (max-width: 640px) {
+  .filters .field { flex: 1 1 100%; }
+  .field.campaign select, .field select { width: 100%; }
+  #custom-range.on { flex: 1 1 100%; }
+  #custom-range .field { flex: 1 1 0; }
+}
+
+.card { background: var(--surface); border: 1px solid var(--ring); border-radius: 14px; padding: 18px; }
+.card h2 { font-size: 15px; font-weight: 600; margin: 0; }
+.card .card-head { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.card .hint { font-size: 12px; color: var(--muted); }
+section { margin-bottom: 16px; }
+
+.kpis { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+.kpis.primary { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); margin-bottom: 12px; }
+.tile { background: var(--surface); border: 1px solid var(--ring); border-radius: 14px; padding: 14px 16px; min-width: 0; }
+.tile .label { font-size: 12px; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tile .value { font-size: 22px; font-weight: 620; margin-top: 4px; letter-spacing: -0.01em; white-space: nowrap; }
+.kpis.primary .tile .value { font-size: 30px; }
+.tile .delta { font-size: 12px; margin-top: 4px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.delta .good { color: var(--good); font-weight: 600; }
+.delta .bad { color: var(--bad); font-weight: 600; }
+.delta .flat { color: var(--ink-2); font-weight: 600; }
+
+.tabs { display: flex; flex-wrap: wrap; gap: 4px; background: var(--surface-2); padding: 3px; border-radius: 9px; }
+.tabs button { border: 0; background: transparent; color: var(--ink-2); font: inherit; font-size: 12.5px; padding: 5px 10px; border-radius: 7px; cursor: pointer; }
+.tabs button[aria-pressed="true"] { background: var(--surface); color: var(--ink); font-weight: 600; box-shadow: 0 0 0 1px var(--ring); }
+
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 12px; color: var(--ink-2); margin-bottom: 8px; }
+.legend .k { display: inline-flex; align-items: center; gap: 6px; }
+.legend .line { width: 14px; height: 2px; border-radius: 2px; }
+.legend .rect { width: 10px; height: 10px; border-radius: 3px; }
+
+.chart-box { position: relative; height: 280px; }
+.chart-box.short { height: 240px; }
+.grid2 { display: grid; gap: 16px; grid-template-columns: 1fr; }
+@media (min-width: 900px) { .grid2 { grid-template-columns: 3fr 2fr; } }
+
+.table-scroll { overflow-x: auto; margin: 0 -18px; padding: 0 18px; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th, td { padding: 9px 10px; text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+th:first-child, td:first-child { text-align: left; padding-left: 0; }
+th { font-size: 12px; font-weight: 500; color: var(--muted); border-bottom: 1px solid var(--grid); cursor: pointer; user-select: none; }
+th.sorted { color: var(--ink); }
+th.sorted::after { content: " ↓"; }
+th.sorted.asc::after { content: " ↑"; }
+td { border-bottom: 1px solid var(--grid); }
+tbody tr { cursor: pointer; }
+tbody tr:hover td { background: var(--surface-2); }
+tfoot td { font-weight: 600; border-bottom: 0; }
+.name-cell { display: flex; flex-direction: column; gap: 2px; max-width: 340px; }
+@media (max-width: 640px) { .name-cell { max-width: 190px; } }
+.name-cell .n { overflow: hidden; text-overflow: ellipsis; font-weight: 520; }
+.name-cell .m { font-size: 11.5px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; display: flex; gap: 6px; align-items: center; }
+.dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; flex: none; }
+.share { display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
+.share .bar { width: 48px; height: 6px; background: var(--surface-2); border-radius: 3px; overflow: hidden; }
+.share .bar i { display: block; height: 100%; background: var(--s1); border-radius: 0 3px 3px 0; }
+.ad-row td:first-child { display: flex; gap: 10px; align-items: center; }
+.thumb { width: 44px; height: 44px; border-radius: 8px; object-fit: cover; background: var(--surface-2); flex: none; }
+a { color: var(--accent); }
+.muted { color: var(--muted); }
+.btn-link { border: 0; background: none; color: var(--accent); font: inherit; font-size: 13px; cursor: pointer; padding: 0; }
+
+#tooltip { display: none; }
+.empty { padding: 32px; text-align: center; color: var(--muted); }
+footer { color: var(--muted); font-size: 12px; margin-top: 28px; line-height: 1.6; }
+.banner { background: var(--warn-bg); color: var(--warn-ink); padding: 10px 14px; border-radius: 10px; margin-bottom: 16px; font-size: 13px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>Career180 · Meta Ads</h1>
+      <div class="sub" id="sub"></div>
+    </div>
+    <div class="top-right">
+      <span class="pill" id="freshness"></span>
+      <button class="icon" id="theme-btn" type="button" aria-label="Toggle dark mode">◐ Theme</button>
+    </div>
+  </header>
+
+  <div id="banner"></div>
+
+  <div class="filters" role="group" aria-label="Filters">
+    <label class="field">
+      <span>Date range</span>
+      <select id="preset">
+        <option value="yesterday">Yesterday</option>
+        <option value="last_7d">Last 7 days</option>
+        <option value="last_14d">Last 14 days</option>
+        <option value="last_30d">Last 30 days</option>
+        <option value="last_90d">Last 90 days</option>
+        <option value="this_month">This month</option>
+        <option value="last_month">Last month</option>
+        <option value="max">All available</option>
+        <option value="custom">Custom…</option>
+      </select>
+    </label>
+    <div id="custom-range">
+      <label class="field"><span>From</span><input type="date" id="from"></label>
+      <label class="field"><span>To</span><input type="date" id="to"></label>
+    </div>
+    <label class="field campaign">
+      <span>Campaign</span>
+      <select id="campaign"></select>
+    </label>
+    <label class="field">
+      <span>Count as result</span>
+      <select id="result"></select>
+    </label>
+  </div>
+
+  <section class="kpis primary" id="kpis-primary"></section>
+  <section class="kpis" id="kpis-secondary"></section>
+
+  <section class="card">
+    <div class="card-head">
+      <h2 id="trend-title">Daily trend</h2>
+      <div class="tabs" id="trend-tabs" role="group" aria-label="Trend metric"></div>
+    </div>
+    <div class="legend" id="trend-legend"></div>
+    <div class="chart-box"><canvas id="trend" role="img" aria-label="Daily trend chart"></canvas></div>
+  </section>
+
+  <section class="card">
+    <div class="card-head">
+      <h2>Campaigns</h2>
+      <div style="display:flex;gap:14px;align-items:center">
+        <span class="hint">Click a row to filter the dashboard</span>
+        <button class="btn-link" id="csv-btn" type="button">Download CSV</button>
+      </div>
+    </div>
+    <div class="table-scroll"><table id="campaign-table"></table></div>
+  </section>
+
+  <section class="grid2">
+    <div class="card">
+      <div class="card-head">
+        <h2>Age &amp; gender</h2>
+        <div class="tabs" id="bd-tabs" role="group" aria-label="Breakdown metric"></div>
+      </div>
+      <div class="legend" id="ag-legend"></div>
+      <div class="chart-box short"><canvas id="age-gender" role="img" aria-label="Age and gender breakdown"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-head"><h2>Placements</h2><span class="hint" id="pl-hint"></span></div>
+      <div class="chart-box short"><canvas id="platform" role="img" aria-label="Platform breakdown"></canvas></div>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-head">
+      <h2>Ads</h2>
+      <span class="hint" id="ads-hint"></span>
+    </div>
+    <div class="table-scroll"><table id="ad-table"></table></div>
+    <div style="margin-top:12px"><button class="btn-link" id="ads-more" type="button"></button></div>
+  </section>
+
+  <footer id="footer"></footer>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+const DATA = /*__DATA__*/null;
+
+(function () {
+  'use strict';
+  if (!DATA) { document.querySelector('.wrap').textContent = 'No data embedded — run scripts/build.mjs.'; return; }
+
+  const M = DATA.meta;
+  const R = DATA.rows;
+  const AT = DATA.action_types;
+
+  // ---------- labels ----------
+  const ACTION_LABELS = {
+    'lead': 'Leads (all)',
+    'onsite_conversion.lead_grouped': 'Leads (instant form)',
+    'offsite_conversion.fb_pixel_lead': 'Leads (website)',
+    'onsite_conversion.lead': 'Leads (on Meta)',
+    'complete_registration': 'Registrations',
+    'offsite_conversion.fb_pixel_complete_registration': 'Registrations (website)',
+    'purchase': 'Purchases',
+    'omni_purchase': 'Purchases (all)',
+    'offsite_conversion.fb_pixel_purchase': 'Purchases (website)',
+    'onsite_conversion.messaging_conversation_started_7d': 'Messaging conversations',
+    'onsite_conversion.messaging_first_reply': 'Messaging first replies',
+    'onsite_conversion.total_messaging_connection': 'Messaging connections',
+    'submit_application': 'Applications',
+    'offsite_conversion.fb_pixel_submit_application': 'Applications (website)',
+    'contact': 'Contacts',
+    'offsite_conversion.fb_pixel_contact': 'Contacts (website)',
+    'schedule': 'Schedules',
+    'initiate_checkout': 'Checkouts initiated',
+    'offsite_conversion.fb_pixel_initiate_checkout': 'Checkouts initiated (website)',
+    'add_to_cart': 'Adds to cart',
+    'view_content': 'Content views',
+    'offsite_conversion.fb_pixel_view_content': 'Content views (website)',
+    'landing_page_view': 'Landing page views',
+    'link_click': 'Link clicks',
+    'video_view': '3-second video views',
+    'post_engagement': 'Post engagements',
+    'page_engagement': 'Page engagements',
+    'post_reaction': 'Reactions',
+    'comment': 'Comments',
+    'like': 'Page likes',
+    'onsite_conversion.post_save': 'Post saves',
+    'app_install': 'App installs',
+    'mobile_app_install': 'App installs',
+  };
+  const RESULT_PREF = ['lead', 'onsite_conversion.lead_grouped', 'offsite_conversion.fb_pixel_lead',
+    'complete_registration', 'offsite_conversion.fb_pixel_complete_registration', 'purchase', 'omni_purchase',
+    'onsite_conversion.messaging_conversation_started_7d', 'submit_application', 'contact', 'landing_page_view', 'link_click'];
+  const CUSTOM = DATA.custom_conversions || {};
+  function actionLabel(t) {
+    if (ACTION_LABELS[t]) return ACTION_LABELS[t];
+    const cc = t.match(/^offsite_conversion\.custom\.(\d+)$/);
+    if (cc) return CUSTOM[cc[1]] ? `${CUSTOM[cc[1]]} (custom)` : `Custom conversion ${cc[1]}`;
+    return t.replace(/^(offsite_conversion|onsite_conversion|onsite_web|offline_conversion)\./, '').replace(/^fb_pixel_/, '').replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase());
+  }
+  const PLATFORM_LABELS = { facebook: 'Facebook', instagram: 'Instagram', audience_network: 'Audience Network', messenger: 'Messenger', threads: 'Threads', whatsapp: 'WhatsApp' };
+  const STATUS = {
+    ACTIVE: ['Active', 'var(--good)'], PAUSED: ['Paused', 'var(--muted)'], CAMPAIGN_PAUSED: ['Campaign paused', 'var(--muted)'],
+    ADSET_PAUSED: ['Ad set paused', 'var(--muted)'], ARCHIVED: ['Archived', 'var(--muted)'], DELETED: ['Deleted', 'var(--muted)'],
+    WITH_ISSUES: ['With issues', 'var(--bad)'], DISAPPROVED: ['Disapproved', 'var(--bad)'], PENDING_REVIEW: ['In review', 'var(--muted)'],
+    IN_PROCESS: ['Processing', 'var(--muted)'],
+  };
+
+  // ---------- formatting ----------
+  const cur = M.currency || 'USD';
+  const fMoney = new Intl.NumberFormat('en', { style: 'currency', currency: cur, maximumFractionDigits: 0 });
+  const fMoney2 = new Intl.NumberFormat('en', { style: 'currency', currency: cur, minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const fMoneyC = new Intl.NumberFormat('en', { style: 'currency', currency: cur, notation: 'compact', maximumFractionDigits: 1 });
+  const fInt = new Intl.NumberFormat('en', { maximumFractionDigits: 0 });
+  const fC = new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 });
+  const fmt = {
+    money: (v) => v == null ? '—' : (Math.abs(v) >= 1e6 ? fMoneyC.format(v) : fMoney.format(v)),
+    money2: (v) => v == null ? '—' : (v >= 1000 ? fMoney.format(v) : fMoney2.format(v)),
+    int: (v) => v == null ? '—' : (Math.abs(v) >= 1e6 ? fC.format(v) : fInt.format(v)),
+    intFull: (v) => v == null ? '—' : fInt.format(v),
+    pct: (v) => v == null ? '—' : (v * 100).toFixed(2) + '%',
+    x: (v) => v == null ? '—' : v.toFixed(2) + '×',
+    dec: (v) => v == null ? '—' : v.toFixed(2),
+  };
+  const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const fDate = (d) => `${MONTHS[+d.slice(5, 7) - 1]} ${+d.slice(8, 10)}`;
+  const fDateY = (d) => `${fDate(d)}, ${d.slice(0, 4)}`;
+  const fRange = (r) => r.from === r.to ? fDateY(r.from) : (r.from.slice(0, 4) === r.to.slice(0, 4) ? `${fDate(r.from)} – ${fDateY(r.to)}` : `${fDateY(r.from)} – ${fDateY(r.to)}`);
+
+  // ---------- dates ----------
+  function addDays(d, n) { const t = new Date(d + 'T00:00:00Z'); t.setUTCDate(t.getUTCDate() + n); return t.toISOString().slice(0, 10); }
+  function daysBetween(a, b) { return Math.round((new Date(b + 'T00:00:00Z') - new Date(a + 'T00:00:00Z')) / 864e5); }
+  function eachDay(r) { const out = []; for (let d = r.from; d <= r.to; d = addDays(d, 1)) out.push(d); return out; }
+
+  const TODAY = M.until;
+  const YDAY = addDays(TODAY, -1);
+  function rangeFor(p) {
+    switch (p) {
+      case 'yesterday': return { from: YDAY, to: YDAY };
+      case 'last_7d': return { from: addDays(YDAY, -6), to: YDAY };
+      case 'last_14d': return { from: addDays(YDAY, -13), to: YDAY };
+      case 'last_30d': return { from: addDays(YDAY, -29), to: YDAY };
+      case 'last_90d': return { from: addDays(YDAY, -89), to: YDAY };
+      case 'this_month': return { from: TODAY.slice(0, 8) + '01', to: TODAY };
+      case 'last_month': { const first = TODAY.slice(0, 8) + '01'; const end = addDays(first, -1); return { from: end.slice(0, 8) + '01', to: end }; }
+      case 'max': return { from: M.since, to: TODAY };
+      default: return { from: state.from || addDays(YDAY, -29), to: state.to || YDAY };
+    }
+  }
+  function prevOf(r) { const len = daysBetween(r.from, r.to) + 1; return { from: addDays(r.from, -len), to: addDays(r.from, -1), len }; }
+
+  // ---------- state (mirrored to the URL hash so views can be shared) ----------
+  const state = { preset: 'last_30d', from: null, to: null, campaign: 'all', result: null, trend: 'spend', bd: 'spend', campSort: ['spend', -1], adSort: ['spend', -1], adsAll: false };
+  (function readHash() {
+    const h = new URLSearchParams(location.hash.slice(1));
+    for (const k of ['preset', 'from', 'to', 'campaign', 'result', 'trend', 'bd']) if (h.get(k)) state[k] = h.get(k);
+  })();
+  function writeHash() {
+    const h = new URLSearchParams();
+    h.set('preset', state.preset);
+    if (state.preset === 'custom') { h.set('from', state.from); h.set('to', state.to); }
+    if (state.campaign !== 'all') h.set('campaign', state.campaign);
+    h.set('result', state.result);
+    if (state.trend !== 'spend') h.set('trend', state.trend);
+    history.replaceState(null, '', '#' + h.toString());
+  }
+
+  // ---------- aggregation ----------
+  // Row layouts: campaign/ad: [date, id, ...core]; age_gender: [date, cid, age, gender, ...core]; platform: [date, cid, platform, ...core]
+  // core = [spend, impressions, clicks, link_clicks, actions{}, values{}]
+  const adCampaign = (id) => (DATA.ads[id] || {}).campaign_id;
+  function blank() { return { spend: 0, impr: 0, clicks: 0, link: 0, results: 0, value: 0, days: 0 }; }
+  function add(t, row, o, ri) {
+    t.spend += row[o]; t.impr += row[o + 1]; t.clicks += row[o + 2]; t.link += row[o + 3];
+    if (ri != null) { t.results += row[o + 4][ri] || 0; t.value += row[o + 5][ri] || 0; }
+    return t;
+  }
+  function derive(t) {
+    return Object.assign(t, {
+      cpr: t.results ? t.spend / t.results : null,
+      ctr: t.impr ? t.link / t.impr : null,
+      cpc: t.link ? t.spend / t.link : null,
+      cpm: t.impr ? t.spend / t.impr * 1000 : null,
+      roas: t.spend && t.value ? t.value / t.spend : null,
+      cvr: t.link ? t.results / t.link : null,
+    });
+  }
+  const inR = (d, r) => d >= r.from && d <= r.to;
+  const campOk = (cid) => state.campaign === 'all' || cid === state.campaign;
+  function resultIdx() { const i = AT.indexOf(state.result); return i < 0 ? null : String(i); }
+
+  function totals(r) {
+    const t = blank(), ri = resultIdx();
+    for (const row of R.campaign) if (inR(row[0], r) && campOk(row[1])) add(t, row, 2, ri);
+    return derive(t);
+  }
+  function daily(r) {
+    const ri = resultIdx(), map = new Map(eachDay(r).map((d) => [d, blank()]));
+    for (const row of R.campaign) if (inR(row[0], r) && campOk(row[1])) add(map.get(row[0]), row, 2, ri);
+    return [...map.entries()].map(([d, t]) => [d, derive(t)]);
+  }
+  function groupBy(rows, r, o, keyFn, campFn) {
+    const ri = resultIdx(), map = new Map();
+    for (const row of rows) {
+      if (!inR(row[0], r) || !campOk(campFn(row))) continue;
+      const k = keyFn(row);
+      if (!map.has(k)) map.set(k, blank());
+      add(map.get(k), row, o, ri);
+    }
+    for (const t of map.values()) derive(t);
+    return map;
+  }
+
+  // ---------- controls ----------
+  const $ = (s) => document.querySelector(s);
+  function h(tag, attrs, ...kids) {
+    const e = document.createElement(tag);
+    if (attrs) for (const [k, v] of Object.entries(attrs)) {
+      if (v == null || v === false) continue;
+      if (k === 'style') e.style.cssText = v; else if (k === 'class') e.className = v;
+      else if (k.startsWith('on')) e.addEventListener(k.slice(2), v); else e.setAttribute(k, v);
+    }
+    for (const c of kids.flat()) if (c != null) e.append(c instanceof Node ? c : document.createTextNode(String(c)));
+    return e;
+  }
+
+  // Result types that actually occur, preferred conversion types first.
+  const resultTypes = (() => {
+    const sums = new Map();
+    for (const row of R.campaign) for (const [i, v] of Object.entries(row[6])) sums.set(+i, (sums.get(+i) || 0) + v);
+    const present = [...sums.keys()].filter((i) => sums.get(i) > 0).map((i) => AT[i]);
+    const rank = (t) => { const p = RESULT_PREF.indexOf(t); if (p >= 0) return p; if (/custom|lead|regist|purchase|messag|applic|contact|schedule/.test(t)) return 50; return 100; };
+    return present.sort((a, b) => rank(a) - rank(b) || actionLabel(a).localeCompare(actionLabel(b)));
+  })();
+  if (!state.result || !resultTypes.includes(state.result)) state.result = resultTypes[0] || 'link_click';
+
+  const resSel = $('#result');
+  for (const t of resultTypes) resSel.append(h('option', { value: t }, actionLabel(t)));
+  resSel.value = state.result;
+
+  const campSel = $('#campaign');
+  campSel.append(h('option', { value: 'all' }, 'All campaigns'));
+  const campSpend = new Map();
+  for (const row of R.campaign) campSpend.set(row[1], (campSpend.get(row[1]) || 0) + row[2]);
+  const campIds = Object.keys(DATA.campaigns).sort((a, b) => {
+    const act = (id) => DATA.campaigns[id].status === 'ACTIVE' ? 0 : 1;
+    return act(a) - act(b) || (campSpend.get(b) || 0) - (campSpend.get(a) || 0);
+  });
+  for (const id of campIds) campSel.append(h('option', { value: id }, DATA.campaigns[id].name));
+  if (!DATA.campaigns[state.campaign]) state.campaign = 'all';
+  campSel.value = state.campaign;
+
+  const presetSel = $('#preset');
+  presetSel.value = state.preset;
+  const fromIn = $('#from'), toIn = $('#to');
+  for (const i of [fromIn, toIn]) { i.min = M.since; i.max = TODAY; }
+
+  function syncCustom() {
+    const on = state.preset === 'custom';
+    $('#custom-range').classList.toggle('on', on);
+    const r = rangeFor(state.preset);
+    fromIn.value = r.from; toIn.value = r.to;
+  }
+  presetSel.addEventListener('change', () => {
+    if (presetSel.value === 'custom') { const r = rangeFor(state.preset); state.from = r.from; state.to = r.to; }
+    state.preset = presetSel.value; syncCustom(); render();
+  });
+  for (const i of [fromIn, toIn]) i.addEventListener('change', () => {
+    if (!fromIn.value || !toIn.value) return;
+    state.from = fromIn.value <= toIn.value ? fromIn.value : toIn.value;
+    state.to = fromIn.value <= toIn.value ? toIn.value : fromIn.value;
+    render();
+  });
+  campSel.addEventListener('change', () => { state.campaign = campSel.value; render(); });
+  resSel.addEventListener('change', () => { state.result = resSel.value; render(); });
+  syncCustom();
+
+  // ---------- theme ----------
+  const root = document.documentElement;
+  try { const t = localStorage.getItem('c180-theme'); if (t) root.dataset.theme = t; } catch (e) {}
+  $('#theme-btn').addEventListener('click', () => {
+    const dark = root.dataset.theme ? root.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+    root.dataset.theme = dark ? 'light' : 'dark';
+    try { localStorage.setItem('c180-theme', root.dataset.theme); } catch (e) {}
+    render();
+  });
+  matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { if (!root.dataset.theme) render(); });
+  const css = (n) => getComputedStyle(root).getPropertyValue(n).trim();
+
+  // ---------- header ----------
+  (function header() {
+    const gen = new Date(M.generated_at);
+    const when = gen.toLocaleString('en-GB', { timeZone: M.timezone, day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+    $('#sub').textContent = `${M.name} · act_${M.account_id} · ${cur}`;
+    const fresh = $('#freshness');
+    const ageH = (Date.now() - gen.getTime()) / 36e5;
+    fresh.textContent = `Updated ${when}`;
+    if (ageH > 36) { fresh.classList.add('warn'); fresh.textContent = `⚠ Data from ${when} — refresh may have failed`; }
+    if (M.sample) $('#banner').append(h('div', { class: 'banner' }, 'Preview with sample data — real numbers appear once the Meta token is connected.'));
+    $('#footer').append(
+      h('div', null, `Source: Meta Marketing API ${M.api_version}, ad account act_${M.account_id}. Data from ${fDateY(M.since)} to ${fDateY(M.until)} (account time zone ${M.timezone}). Refreshes automatically every morning.`),
+      h('div', null, 'Results use each ad set’s attribution setting, matching Ads Manager. Recent days can still change slightly as Meta finalises conversions. Reach and frequency are only shown for preset ranges across all campaigns, since reach can’t be added up across days.'),
+    );
+  })();
+
+  // ---------- KPI tiles ----------
+  const KPI = {
+    spend: { label: 'Amount spent', f: (t) => fmt.money(t.spend), v: (t) => t.spend, dir: 0 },
+    results: { label: () => actionLabel(state.result), f: (t) => fmt.int(t.results), v: (t) => t.results, dir: 1 },
+    cpr: { label: () => 'Cost per ' + singular(actionLabel(state.result)), f: (t) => fmt.money2(t.cpr), v: (t) => t.cpr, dir: -1 },
+    impr: { label: 'Impressions', f: (t) => fmt.int(t.impr), v: (t) => t.impr, dir: 1 },
+    reach: { label: 'Reach', f: (t) => t.reach == null ? '—' : fmt.int(t.reach), v: (t) => t.reach, dir: 1 },
+    freq: { label: 'Frequency', f: (t) => t.frequency == null ? '—' : fmt.dec(t.frequency), v: (t) => t.frequency, dir: 0 },
+    cpm: { label: 'CPM', f: (t) => fmt.money2(t.cpm), v: (t) => t.cpm, dir: -1 },
+    link: { label: 'Link clicks', f: (t) => fmt.int(t.link), v: (t) => t.link, dir: 1 },
+    ctr: { label: 'CTR (link)', f: (t) => fmt.pct(t.ctr), v: (t) => t.ctr, dir: 1 },
+    cpc: { label: 'CPC (link)', f: (t) => fmt.money2(t.cpc), v: (t) => t.cpc, dir: -1 },
+    cvr: { label: () => 'Click → ' + singular(actionLabel(state.result)).toLowerCase(), f: (t) => fmt.pct(t.cvr), v: (t) => t.cvr, dir: 1 },
+    roas: { label: 'ROAS', f: (t) => fmt.x(t.roas), v: (t) => t.roas, dir: 1 },
+  };
+  function singular(s) { return s.replace(/\s*\(.*\)$/, '').replace(/ies$/, 'y').replace(/s$/, '').toLowerCase(); }
+  function lbl(k) { const l = KPI[k].label; return typeof l === 'function' ? l() : l; }
+
+  function deltaEl(k, curT, prevT, prevLen, prevOk, short) {
+    const d = h('div', { class: 'delta' });
+    const a = KPI[k].v(curT), b = prevOk && prevT ? KPI[k].v(prevT) : null;
+    if (a == null || b == null || b === 0) { d.append(prevOk ? '—' : 'No earlier data'); return d; }
+    const ch = (a - b) / b;
+    const dir = KPI[k].dir;
+    const flat = Math.abs(ch) < 0.005;
+    const cls = flat || dir === 0 ? 'flat' : ((ch > 0) === (dir > 0) ? 'good' : 'bad');
+    const arrow = flat ? '→' : (ch > 0 ? '▲' : '▼');
+    d.append(h('span', { class: cls }, `${arrow} ${Math.abs(ch * 100).toFixed(Math.abs(ch) < 0.1 ? 1 : 0)}%`), short ? ' vs prev.' : ` vs previous ${prevLen} day${prevLen > 1 ? 's' : ''}`);
+    return d;
+  }
+
+  function renderKPIs(r, p, t, pt, prevOk) {
+    const reachPreset = state.campaign === 'all' && DATA.reach && DATA.reach[state.preset];
+    t.reach = reachPreset ? reachPreset.reach : null;
+    t.frequency = reachPreset ? reachPreset.frequency : null;
+    const keys1 = ['spend', 'results', 'cpr'];
+    const keys2 = ['impr', 'reach', 'freq', 'cpm', 'link', 'ctr', 'cpc', 'cvr'];
+    if (t.value > 0 || (pt && pt.value > 0)) keys2.push('roas');
+    const tile = (k) => h('div', { class: 'tile', title: k === 'reach' || k === 'freq' ? null : `Compared with ${fRange(p)}` },
+      h('div', { class: 'label', title: lbl(k) }, lbl(k)),
+      h('div', { class: 'value' }, KPI[k].f(t)),
+      (k === 'reach' || k === 'freq')
+        ? h('div', { class: 'delta' }, t.reach == null ? (state.campaign === 'all' ? 'Preset ranges only' : 'All campaigns only') : (k === 'reach' ? 'Unique people' : 'Avg. per person'))
+        : deltaEl(k, t, pt, p.len, prevOk, !keys1.includes(k)));
+    $('#kpis-primary').replaceChildren(...keys1.map(tile));
+    $('#kpis-secondary').replaceChildren(...keys2.map(tile));
+  }
+
+  // ---------- charts ----------
+  const charts = {};
+  function chart(id, cfg) { if (charts[id]) charts[id].destroy(); charts[id] = new Chart(document.getElementById(id), cfg); return charts[id]; }
+  function baseOpts(fmtY) {
+    const muted = css('--muted'), grid = css('--grid'), axis = css('--axis');
+    return {
+      animation: false, responsive: true, maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: css('--surface'), titleColor: css('--ink-2'), bodyColor: css('--ink'),
+          borderColor: css('--ring'), borderWidth: 1, padding: 10, cornerRadius: 8, boxPadding: 4,
+          titleFont: { weight: '500', size: 12 }, bodyFont: { weight: '600', size: 13 }, usePointStyle: true,
+        },
+      },
+      scales: {
+        x: { grid: { display: false }, border: { color: axis }, ticks: { color: muted, font: { size: 11 }, maxRotation: 0, autoSkipPadding: 16 } },
+        y: { beginAtZero: true, grid: { color: grid }, border: { display: false }, ticks: { color: muted, font: { size: 11 }, maxTicksLimit: 5, callback: fmtY } },
+      },
+    };
+  }
+  const crosshair = {
+    id: 'crosshair',
+    afterDatasetsDraw(c) {
+      const a = c.tooltip && c.tooltip.getActiveElements();
+      if (!a || !a.length) return;
+      const x = a[0].element.x, { top, bottom } = c.chartArea, ctx = c.ctx;
+      ctx.save(); ctx.strokeStyle = css('--axis'); ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(x, top); ctx.lineTo(x, bottom); ctx.stroke(); ctx.restore();
+    },
+  };
+  const compactMoney = (v) => (Math.abs(v) >= 1000 ? fMoneyC.format(v) : fMoney.format(v));
+
+  const TREND = [
+    ['spend', 'Spend', (t) => t.spend, compactMoney, fmt.money],
+    ['results', 'Results', (t) => t.results, (v) => fC.format(v), fmt.intFull],
+    ['cpr', 'Cost per result', (t) => t.cpr, compactMoney, fmt.money2],
+    ['link', 'Link clicks', (t) => t.link, (v) => fC.format(v), fmt.intFull],
+    ['ctr', 'CTR', (t) => t.ctr, (v) => (v * 100).toFixed(1) + '%', fmt.pct],
+    ['cpm', 'CPM', (t) => t.cpm, compactMoney, fmt.money2],
+  ];
+  const tabs = $('#trend-tabs');
+  for (const [k, label] of TREND) tabs.append(h('button', { type: 'button', 'data-k': k, onclick: () => { state.trend = k; render(); } }, label));
+  if (!TREND.some((x) => x[0] === state.trend)) state.trend = 'spend';
+
+  function renderTrend(r, p, prevOk) {
+    for (const b of tabs.children) b.setAttribute('aria-pressed', String(b.dataset.k === state.trend));
+    const [, label, get, fmtY, fmtV] = TREND.find((x) => x[0] === state.trend);
+    const curD = daily(r);
+    const prevD = prevOk ? daily({ from: p.from, to: p.to }) : [];
+    const lab = state.trend === 'results' ? actionLabel(state.result) : state.trend === 'cpr' ? 'Cost per ' + singular(actionLabel(state.result)) : label;
+    $('#trend-title').textContent = `${lab} per day`;
+    const s1 = css('--s1'), prevC = css('--prev');
+    $('#trend-legend').replaceChildren(
+      h('span', { class: 'k' }, h('i', { class: 'line', style: `background:${s1}` }), `Selected (${fRange(r)})`),
+      prevOk ? h('span', { class: 'k' }, h('i', { class: 'line', style: `background:${prevC}` }), `Previous (${fRange(p)})`) : null,
+    );
+    const opts = baseOpts(fmtY);
+    opts.scales.x.ticks.callback = function (v) { return fDate(curD[v][0]); };
+    opts.plugins.tooltip.callbacks = {
+      title: (items) => fDateY(curD[items[0].dataIndex][0]),
+      label: (it) => {
+        const v = it.raw == null ? '—' : fmtV(it.raw);
+        if (it.datasetIndex === 0) return ` ${v}`;
+        const pd = prevD[it.dataIndex];
+        return ` ${v}  (${pd ? fDate(pd[0]) : ''})`;
+      },
+    };
+    chart('trend', {
+      type: 'line',
+      data: {
+        labels: curD.map((d) => d[0]),
+        datasets: [
+          { label: 'Selected', data: curD.map((d) => get(d[1])), borderColor: s1, backgroundColor: css('--s1-wash'), fill: 'origin', borderWidth: 2, pointRadius: curD.length < 2 ? 4 : 0, pointHoverRadius: 5, pointBackgroundColor: s1, pointBorderColor: css('--surface'), pointBorderWidth: 2, tension: 0.25, borderCapStyle: 'round', borderJoinStyle: 'round', order: 1 },
+          prevOk ? { label: 'Previous', data: prevD.map((d) => get(d[1])), borderColor: prevC, backgroundColor: 'transparent', fill: false, borderWidth: 2, pointRadius: 0, pointHoverRadius: 4, pointBackgroundColor: prevC, pointBorderColor: css('--surface'), pointBorderWidth: 2, tension: 0.25, order: 2 } : null,
+        ].filter(Boolean),
+      },
+      options: opts,
+      plugins: [crosshair],
+    });
+  }
+
+  // Breakdowns
+  const BD = [['spend', 'Spend'], ['results', 'Results'], ['cpr', 'Cost / result'], ['ctr', 'CTR']];
+  const bdTabs = $('#bd-tabs');
+  for (const [k, label] of BD) bdTabs.append(h('button', { type: 'button', 'data-k': k, onclick: () => { state.bd = k; render(); } }, label));
+  if (!BD.some((x) => x[0] === state.bd)) state.bd = 'spend';
+  const bdFmt = { spend: [compactMoney, fmt.money], results: [(v) => fC.format(v), fmt.intFull], cpr: [compactMoney, fmt.money2], ctr: [(v) => (v * 100).toFixed(1) + '%', fmt.pct] };
+
+  function renderBreakdowns(r) {
+    for (const b of bdTabs.children) b.setAttribute('aria-pressed', String(b.dataset.k === state.bd));
+    const k = state.bd, [fy, fv] = bdFmt[k];
+    const ag = groupBy(R.age_gender, r, 4, (row) => row[2] + '|' + row[3], (row) => row[1]);
+    const ages = [...new Set([...ag.keys()].map((x) => x.split('|')[0]))].filter((a) => a !== 'Unknown').sort();
+    const GEN = [['female', 'Women', '--s1'], ['male', 'Men', '--s2'], ['unknown', 'Unknown', '--s3']]
+      .filter(([g]) => ages.some((a) => ag.has(a + '|' + g) && ag.get(a + '|' + g).spend > 0));
+    $('#ag-legend').replaceChildren(...GEN.map(([, l, c]) => h('span', { class: 'k' }, h('i', { class: 'rect', style: `background:${css(c)}` }), l)));
+    const o1 = baseOpts(fy);
+    o1.plugins.tooltip.callbacks = { title: (it) => `Age ${it[0].label}`, label: (it) => ` ${it.dataset.label}: ${it.raw == null ? '—' : fv(it.raw)}` };
+    chart('age-gender', {
+      type: 'bar',
+      data: {
+        labels: ages,
+        datasets: GEN.map(([g, l, c]) => ({
+          label: l, data: ages.map((a) => { const t = ag.get(a + '|' + g); return t ? t[k] : null; }),
+          backgroundColor: css(c), borderRadius: { topLeft: 4, topRight: 4 }, borderSkipped: 'start',
+          maxBarThickness: 24, categoryPercentage: 0.7, barPercentage: 0.92,
+        })),
+      },
+      options: o1,
+    });
+
+    const pl = groupBy(R.platform, r, 3, (row) => row[2], (row) => row[1]);
+    const plats = [...pl.entries()].filter(([, t]) => t.spend > 0).sort((a, b) => b[1].spend - a[1].spend);
+    $('#pl-hint').textContent = BD.find((x) => x[0] === k)[1] + ' by platform';
+    const o2 = baseOpts(fy);
+    o2.indexAxis = 'y';
+    o2.interaction = { mode: 'nearest', axis: 'y', intersect: false };
+    o2.scales = {
+      y: { grid: { display: false }, border: { color: css('--axis') }, ticks: { color: css('--ink-2'), font: { size: 12 } } },
+      x: { beginAtZero: true, grid: { color: css('--grid') }, border: { display: false }, ticks: { color: css('--muted'), font: { size: 11 }, maxTicksLimit: 5, callback: fy } },
+    };
+    o2.plugins.tooltip.callbacks = { label: (it) => ` ${it.raw == null ? '—' : fv(it.raw)}` };
+    chart('platform', {
+      type: 'bar',
+      data: {
+        labels: plats.map(([p]) => PLATFORM_LABELS[p] || p),
+        datasets: [{ data: plats.map(([, t]) => t[k]), backgroundColor: css('--s1'), borderRadius: { topRight: 4, bottomRight: 4 }, borderSkipped: 'start', maxBarThickness: 22 }],
+      },
+      options: o2,
+    });
+  }
+
+  // ---------- tables ----------
+  const COLS = [
+    ['spend', 'Spend', (t) => fmt.money(t.spend)],
+    ['results', null, (t) => fmt.intFull(t.results)],
+    ['cpr', 'Cost / result', (t) => fmt.money2(t.cpr)],
+    ['link', 'Link clicks', (t) => fmt.intFull(t.link)],
+    ['ctr', 'CTR', (t) => fmt.pct(t.ctr)],
+    ['cpc', 'CPC', (t) => fmt.money2(t.cpc)],
+    ['cpm', 'CPM', (t) => fmt.money2(t.cpm)],
+    ['impr', 'Impressions', (t) => fmt.intFull(t.impr)],
+  ];
+  function cols(withRoas) { return withRoas ? [...COLS, ['roas', 'ROAS', (t) => fmt.x(t.roas)]] : COLS; }
+  function sortRows(list, [key, dir]) {
+    return list.sort((a, b) => {
+      const x = key === 'name' ? a.name : a.t[key], y = key === 'name' ? b.name : b.t[key];
+      if (x == null && y == null) return 0; if (x == null) return 1; if (y == null) return -1;
+      return (key === 'name' ? x.localeCompare(y) : x - y) * dir;
+    });
+  }
+  function headRow(columns, sortState, nameLabel, onSort) {
+    const th = (key, label) => {
+      const sorted = sortState[0] === key;
+      return h('th', {
+        tabindex: 0, scope: 'col', class: sorted ? ('sorted' + (sortState[1] > 0 ? ' asc' : '')) : null,
+        'aria-sort': sorted ? (sortState[1] > 0 ? 'ascending' : 'descending') : null,
+        onclick: () => onSort(key), onkeydown: (e) => { if (e.key === 'Enter') onSort(key); },
+      }, label);
+    };
+    return h('thead', null, h('tr', null, th('name', nameLabel), ...columns.map(([k, l]) => th(k, l || singular(actionLabel(state.result)).replace(/^./, (c) => c.toUpperCase()) + 's'))));
+  }
+  function statusMeta(s) {
+    if (!s) return null;
+    const [label, color] = STATUS[s] || [s.toLowerCase().replace(/_/g, ' '), 'var(--muted)'];
+    return h('span', { style: 'display:inline-flex;align-items:center;gap:5px' }, h('i', { class: 'dot', style: `background:${color}` }), label);
+  }
+  const nextSort = (cur, key) => cur[0] === key ? [key, -cur[1]] : [key, key === 'name' ? 1 : -1];
+
+  let lastCampaignRows = [];
+  function renderCampaigns(r, total) {
+    const g = groupBy(R.campaign, r, 2, (row) => row[1], (row) => row[1]);
+    const list = [...g.entries()].filter(([, t]) => t.spend > 0 || t.impr > 0)
+      .map(([id, t]) => ({ id, t, name: (DATA.campaigns[id] || {}).name || id }));
+    sortRows(list, state.campSort);
+    lastCampaignRows = list;
+    const withRoas = list.some((x) => x.t.value > 0);
+    const columns = cols(withRoas);
+    const table = $('#campaign-table');
+    const maxSpend = Math.max(...list.map((x) => x.t.spend), 1);
+    const body = h('tbody', null, list.map(({ id, t, name }) => {
+      const c = DATA.campaigns[id] || {};
+      const pick = () => { state.campaign = state.campaign === id ? 'all' : id; campSel.value = state.campaign; render(); };
+      return h('tr', { tabindex: 0, onclick: pick, onkeydown: (e) => { if (e.key === 'Enter') pick(); }, title: state.campaign === id ? 'Click to show all campaigns' : 'Click to filter to this campaign' },
+        h('td', null, h('div', { class: 'name-cell' },
+          h('span', { class: 'n', title: name }, name),
+          h('span', { class: 'm' }, statusMeta(c.status), c.objective ? h('span', null, '· ' + c.objective.replace(/^OUTCOME_/, '').toLowerCase()) : null))),
+        ...columns.map(([k, , f]) => k === 'spend'
+          ? h('td', null, h('div', { class: 'share' }, f(t), h('span', { class: 'bar', 'aria-hidden': 'true' }, h('i', { style: `width:${(t.spend / maxSpend * 100).toFixed(1)}%` }))))
+          : h('td', null, f(t))));
+    }));
+    const foot = h('tfoot', null, h('tr', null, h('td', null, `Total · ${list.length} campaign${list.length === 1 ? '' : 's'}`), ...columns.map(([, , f]) => h('td', null, f(total)))));
+    table.replaceChildren(headRow(columns, state.campSort, 'Campaign', (k) => { state.campSort = nextSort(state.campSort, k); render(); }), body, foot);
+    if (!list.length) table.replaceChildren(h('tbody', null, h('tr', null, h('td', { class: 'empty' }, 'No delivery in this period.'))));
+  }
+
+  function renderAds(r) {
+    const g = groupBy(R.ad, r, 2, (row) => row[1], (row) => adCampaign(row[1]));
+    const list = [...g.entries()].filter(([, t]) => t.spend > 0)
+      .map(([id, t]) => ({ id, t, name: (DATA.ads[id] || {}).name || id }));
+    sortRows(list, state.adSort);
+    const withRoas = list.some((x) => x.t.value > 0);
+    const columns = cols(withRoas).filter(([k]) => k !== 'cpm');
+    const shown = state.adsAll ? list : list.slice(0, 15);
+    $('#ads-hint').textContent = `${list.length} ad${list.length === 1 ? '' : 's'} with spend`;
+    const more = $('#ads-more');
+    more.style.display = list.length > 15 ? '' : 'none';
+    more.textContent = state.adsAll ? 'Show top 15' : `Show all ${list.length}`;
+    more.onclick = () => { state.adsAll = !state.adsAll; render(); };
+    const body = h('tbody', null, shown.map(({ id, t, name }) => {
+      const a = DATA.ads[id] || {};
+      const camp = (DATA.campaigns[a.campaign_id] || {}).name || '';
+      const open = () => { if (a.link) window.open(a.link, '_blank', 'noopener'); };
+      return h('tr', { class: 'ad-row', tabindex: a.link ? 0 : null, onclick: open, onkeydown: (e) => { if (e.key === 'Enter') open(); }, title: a.link ? 'Open ad preview' : null, style: a.link ? null : 'cursor:default' },
+        h('td', null,
+          a.thumb ? h('img', { class: 'thumb', src: a.thumb, alt: '', loading: 'lazy', referrerpolicy: 'no-referrer' }) : h('span', { class: 'thumb' }),
+          h('div', { class: 'name-cell' },
+            h('span', { class: 'n', title: name }, name),
+            h('span', { class: 'm', title: `${camp} › ${a.adset || ''}` }, statusMeta(a.status), h('span', { style: 'overflow:hidden;text-overflow:ellipsis' }, (a.status ? '· ' : '') + [camp, a.adset].filter(Boolean).join(' › '))))),
+        ...columns.map(([, , f]) => h('td', null, f(t))));
+    }));
+    $('#ad-table').replaceChildren(headRow(columns, state.adSort, 'Ad', (k) => { state.adSort = nextSort(state.adSort, k); render(); }), body);
+    if (!list.length) $('#ad-table').replaceChildren(h('tbody', null, h('tr', null, h('td', { class: 'empty' }, 'No ads delivered in this period.'))));
+  }
+
+  $('#csv-btn').addEventListener('click', () => {
+    const r = rangeFor(state.preset);
+    const head = ['Campaign', 'Status', 'Objective', 'Spend', actionLabel(state.result), 'Cost per result', 'Link clicks', 'CTR', 'CPC', 'CPM', 'Impressions', 'Purchase value', 'ROAS'];
+    const q = (v) => { const s = v == null ? '' : String(v); return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+    const n = (v, d = 2) => v == null ? '' : +v.toFixed(d);
+    const lines = [head.map(q).join(',')];
+    for (const { id, t, name } of lastCampaignRows) {
+      const c = DATA.campaigns[id] || {};
+      lines.push([name, c.status, c.objective, n(t.spend), t.results, n(t.cpr), t.link, n(t.ctr, 4), n(t.cpc), n(t.cpm), t.impr, n(t.value), n(t.roas)].map(q).join(','));
+    }
+    const blob = new Blob(['﻿' + lines.join('\n')], { type: 'text/csv;charset=utf-8' });
+    const a = h('a', { href: URL.createObjectURL(blob), download: `career180-campaigns_${r.from}_${r.to}.csv` });
+    document.body.append(a); a.click(); a.remove();
+  });
+
+  // ---------- render ----------
+  function render() {
+    const r = rangeFor(state.preset);
+    const p = prevOf(r);
+    const prevOk = p.from >= M.since;
+    const t = totals(r);
+    const pt = prevOk ? totals({ from: p.from, to: p.to }) : null;
+    renderKPIs(r, p, t, pt, prevOk);
+    renderTrend(r, p, prevOk);
+    renderCampaigns(r, t);
+    renderBreakdowns(r);
+    renderAds(r);
+    writeHash();
+  }
+  render();
+})();
+</script>
+</body>
+</html>
