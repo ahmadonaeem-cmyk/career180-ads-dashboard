@@ -1,0 +1,80 @@
+name: Refresh dashboard
+
+on:
+  schedule:
+    - cron: '0 4 * * *'   # 04:00 UTC → 06:00/07:00 Cairo
+  workflow_dispatch:       # "Run workflow" button for an on-demand refresh
+  push:
+    branches: [main]
+
+permissions:
+  contents: write          # keepalive commit only
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      DASHBOARD_PASSWORD: ${{ secrets.DASHBOARD_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Fetch Meta Ads data
+        env:
+          META_ACCESS_TOKEN: ${{ secrets.META_ACCESS_TOKEN }}
+          META_AD_ACCOUNT_ID: ${{ vars.META_AD_ACCOUNT_ID || '653083320675538' }}
+        run: node scripts/fetch-meta.mjs
+
+      - name: Build page
+        run: node scripts/build.mjs
+
+      # Encrypts the whole page (data included) so only people with the password can read it.
+      # The salt in .staticrypt.json stays fixed so "remember me" survives daily rebuilds.
+      - name: Password-protect
+        if: env.DASHBOARD_PASSWORD != ''
+        run: |
+          npx --yes staticrypt@3.5.4 dist/index.html \
+            -p "$DASHBOARD_PASSWORD" --short --remember 30 -d dist \
+            --template-title "Career180 Meta Ads" \
+            --template-instructions "Enter the team password to open the dashboard." \
+            --template-button "Open dashboard" \
+            --template-color-primary "#2a78d6" --template-color-secondary "#f9f9f7"
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
+
+  # GitHub pauses scheduled workflows on public repos after 60 days without commits.
+  keepalive:
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          last=$(git log -1 --format=%ct)
+          if [ $(( ($(date +%s) - last) / 86400 )) -ge 45 ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git commit --allow-empty -m "chore: keep scheduled refresh alive"
+            git push
+          fi

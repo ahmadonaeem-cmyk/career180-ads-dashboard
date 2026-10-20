@@ -1,0 +1,12 @@
+{
+  "name": "career180-ads-dashboard",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "fetch": "node scripts/fetch-meta.mjs",
+    "build": "node scripts/build.mjs",
+    "sample": "node scripts/sample-data.mjs && node scripts/build.mjs data/sample.json",
+    "refresh": "node scripts/fetch-meta.mjs && node scripts/build.mjs"
+  }
+}
