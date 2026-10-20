@@ -19,10 +19,7 @@ const LOOKBACK = Number(process.env.LOOKBACK_DAYS || 190);
 const CHUNK_DAYS = 30;
 const BASE = `https://graph.facebook.com/${VERSION}`;
 
-if (!TOKEN || !ACCOUNT) {
-  console.error('Missing META_ACCESS_TOKEN or META_AD_ACCOUNT_ID (see .env.example).');
-  process.exit(1);
-}
+if (!TOKEN || !ACCOUNT) fail('Missing META_ACCESS_TOKEN or META_AD_ACCOUNT_ID (add the repository secret, or see .env.example).');
 
 const METRICS = ['spend', 'impressions', 'clicks', 'inline_link_clicks', 'actions', 'action_values'];
 
@@ -200,8 +197,8 @@ async function request(url, attempt = 1) {
     await new Promise((r) => setTimeout(r, wait * 1000));
     return request(url, attempt + 1);
   }
-  const msg = `Meta API error ${e.code ?? res.status}${e.error_subcode ? `/${e.error_subcode}` : ''}: ${e.message || res.statusText}`;
-  throw new Error(msg);
+  const where = u.pathname.replace(/^\/v[\d.]+\//, '');
+  fail(`Meta API error ${e.code ?? res.status}${e.error_subcode ? `/${e.error_subcode}` : ''} on ${where}: ${e.message || res.statusText}${hint(e)}`);
 }
 
 function todayIn(tz) {
@@ -216,6 +213,18 @@ function minDate(a, b) { return a < b ? a : b; }
 function num(v) { const n = Number(v); return Number.isFinite(n) ? n : 0; }
 function round(v) { return Math.round(v * 100) / 100; }
 function log(m) { console.log(m); }
+
+// Prints a GitHub Actions error annotation (visible on the run page) and exits.
+function fail(msg) {
+  console.log(process.env.GITHUB_ACTIONS ? `::error title=Meta fetch failed::${msg}` : msg);
+  process.exit(1);
+}
+function hint(e) {
+  if (e.code === 190) return ' → the token is invalid or expired; generate a new system-user token.';
+  if (e.code === 200 || e.code === 10 || e.code === 100 && /permission|access/i.test(e.message || '')) return ' → the system user needs "View performance" on the ad account and the token needs ads_read.';
+  if (e.code === 2635 || /deprecated/i.test(e.message || '')) return ' → set META_API_VERSION to a newer Graph API version.';
+  return '';
+}
 
 async function loadDotEnv() {
   if (!existsSync('.env')) return;

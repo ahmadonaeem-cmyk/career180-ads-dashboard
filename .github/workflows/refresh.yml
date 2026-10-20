@@ -22,9 +22,9 @@ jobs:
     env:
       DASHBOARD_PASSWORD: ${{ secrets.DASHBOARD_PASSWORD }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
 
@@ -50,7 +50,7 @@ jobs:
             --template-color-primary "#2a78d6" --template-color-secondary "#f9f9f7"
 
       - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v4
         with:
           path: dist
 
@@ -69,7 +69,7 @@ jobs:
     if: github.event_name == 'schedule'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - run: |
           last=$(git log -1 --format=%ct)
           if [ $(( ($(date +%s) - last) / 86400 )) -ge 45 ]; then
