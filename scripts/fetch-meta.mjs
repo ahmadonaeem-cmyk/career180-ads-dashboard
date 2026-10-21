@@ -20,7 +20,6 @@ const TOKEN = process.env.META_ACCESS_TOKEN;
 const ACCOUNT = (process.env.META_AD_ACCOUNT_ID || '').replace(/^act_/, '');
 const VERSION = process.env.META_API_VERSION || 'v26.0';
 const LOOKBACK = Number(process.env.LOOKBACK_DAYS || 190);
-const CHUNK_DAYS = 30;
 const BASE = `https://graph.facebook.com/${VERSION}`;
 
 if (!TOKEN || !ACCOUNT) fail('Missing META_ACCESS_TOKEN or META_AD_ACCOUNT_ID (add the repository secret, or see .env.example).');
@@ -43,6 +42,11 @@ const idx = (t) => {
   if (!actIndex.has(t)) { actIndex.set(t, actionTypes.length); actionTypes.push(t); }
   return actIndex.get(t);
 };
+
+// Meta returns 0 spend/impressions/clicks for this account when one synchronous request is
+// split by day (time_increment=1), while period totals are correct. So daily data comes from
+// async report jobs if they agree with the period totals, else from one request per day.
+const MODE = await chooseDailyMode();
 
 // Core rows: [date, id, spend, impressions, clicks, link_clicks, actions{}, values{}]
 const campaignRaw = await insights({ level: 'campaign', fields: ['campaign_id', 'campaign_name', 'objective', ...METRICS] });
@@ -138,25 +142,88 @@ function packActions(list) {
   return out;
 }
 
-async function insights({ level, fields, breakdowns }) {
+function insightParams({ level, fields, breakdowns }) {
+  const p = {
+    level,
+    fields: fields.join(','),
+    limit: 500,
+    // Match Ads Manager: each ad set's own attribution setting.
+    use_unified_attribution_setting: true,
+  };
+  if (breakdowns) p.breakdowns = breakdowns;
+  return p;
+}
+
+async function insights(opts) {
+  const label = `${opts.level}${opts.breakdowns ? ` × ${opts.breakdowns}` : ''}`;
+  const rows = MODE === 'async' ? await asyncInsights(opts, since, until) : await perDayInsights(opts, since, until);
+  log(`  ${label}: ${rows.length} rows (${MODE})`);
+  return rows;
+}
+
+// Daily rows from async report jobs, ~95 days per job.
+async function asyncInsights(opts, from, to) {
   const rows = [];
-  for (let s = since; s <= until; s = addDays(s, CHUNK_DAYS)) {
-    const e = minDate(addDays(s, CHUNK_DAYS - 1), until);
-    const params = {
-      level,
-      fields: fields.join(','),
-      time_increment: 1,
-      time_range: JSON.stringify({ since: s, until: e }),
-      limit: 500,
-      // Match Ads Manager: each ad set's own attribution setting.
-      use_unified_attribution_setting: true,
-    };
-    if (breakdowns) params.breakdowns = breakdowns;
-    const chunk = await getAll(`act_${ACCOUNT}/insights`, params);
-    rows.push(...chunk);
-    log(`  ${level}${breakdowns ? ` × ${breakdowns}` : ''} ${s}…${e}: ${chunk.length} rows`);
+  for (let s = from; s <= to; s = addDays(s, 95)) {
+    const e = minDate(addDays(s, 94), to);
+    rows.push(...await runJob({ ...insightParams(opts), time_range: JSON.stringify({ since: s, until: e }), time_increment: 1 }));
   }
   return rows;
+}
+
+async function runJob(params) {
+  const job = await post(`act_${ACCOUNT}/insights`, params);
+  const started = Date.now();
+  for (;;) {
+    const st = await get(job.report_run_id, { fields: 'async_status,async_percent_completion' });
+    if (st.async_status === 'Job Completed') break;
+    if (/Failed|Skipped/.test(st.async_status || '')) throw new Error(`Async insights job ${st.async_status}`);
+    if (Date.now() - started > 20 * 60e3) throw new Error('Async insights job timed out after 20 minutes');
+    await new Promise((r) => setTimeout(r, 4000));
+  }
+  // The read-back needs the field list again, or it only returns Meta's default columns.
+  return getAll(`${job.report_run_id}/insights`, { fields: params.fields, limit: 500 });
+}
+
+// One request per day (no time_increment) — slower, but returns correct spend.
+async function perDayInsights(opts, from, to) {
+  const days = [];
+  for (let d = from; d <= to; d = addDays(d, 1)) days.push(d);
+  const out = new Array(days.length);
+  let next = 0;
+  const worker = async () => {
+    while (next < days.length) {
+      const i = next++;
+      const d = days[i];
+      const rows = await getAll(`act_${ACCOUNT}/insights`, { ...insightParams(opts), time_range: JSON.stringify({ since: d, until: d }) });
+      out[i] = rows.map((r) => ({ ...r, date_start: r.date_start || d }));
+    }
+  };
+  await Promise.all(Array.from({ length: 5 }, worker));
+  return out.flat();
+}
+
+// Compares daily rows from an async job with Meta's period totals for the last 14 days.
+async function chooseDailyMode() {
+  if (process.env.DAILY_MODE) return process.env.DAILY_MODE;
+  const from = addDays(until, -14), to = addDays(until, -1);
+  const opts = { level: 'campaign', fields: ['campaign_id', 'spend', 'impressions', 'inline_link_clicks'] };
+  const totals = await getAll(`act_${ACCOUNT}/insights`, { ...insightParams(opts), time_range: JSON.stringify({ since: from, until: to }) });
+  let daily;
+  try { daily = await asyncInsights(opts, from, to); } catch (err) {
+    log(`Daily mode: per-day (async jobs unavailable: ${err.message})`);
+    return 'per-day';
+  }
+  const sum = (rows, f) => rows.reduce((s, r) => s + num(r[f]), 0);
+  const checks = ['spend', 'impressions', 'inline_link_clicks'].map((f) => {
+    const a = sum(daily, f), b = sum(totals, f);
+    return [f, a === b || (b > 0 && Math.abs(a - b) / b < 0.02)];
+  });
+  const ok = checks.every(([, v]) => v);
+  const msg = `Daily mode: ${ok ? 'async' : 'per-day'} — async daily vs period totals: ${checks.map(([f, v]) => `${f} ${v ? 'match' : 'MISMATCH'}`).join(', ')}`;
+  log(msg);
+  if (process.env.GITHUB_ACTIONS) console.log(`::notice title=Daily mode::${msg}`);
+  return ok ? 'async' : 'per-day';
 }
 
 // Names/status/thumbnails are nice-to-have: if the list call fails, keep the names from insights.
@@ -191,10 +258,16 @@ function get(path, params = {}) {
   return request(url.toString());
 }
 
-async function request(url, attempt = 1) {
+function post(path, params = {}) {
+  const url = new URL(`${BASE}/${path}`);
+  for (const [k, v] of Object.entries(params)) url.searchParams.set(k, String(v));
+  return request(url.toString(), 1, 'POST');
+}
+
+async function request(url, attempt = 1, method = 'GET') {
   const u = new URL(url);
   u.searchParams.set('access_token', TOKEN);
-  const res = await fetch(u);
+  const res = await fetch(u, { method });
   const body = await res.json().catch(() => ({}));
   if (res.ok && !body.error) return body;
 
@@ -204,7 +277,7 @@ async function request(url, attempt = 1) {
     const wait = Math.min(60, 2 ** attempt * 2);
     log(`  API ${e.code ?? res.status} (${e.message || res.statusText}) — retrying in ${wait}s`);
     await new Promise((r) => setTimeout(r, wait * 1000));
-    return request(url, attempt + 1);
+    return request(url, attempt + 1, method);
   }
   const where = u.pathname.replace(/^\/v[\d.]+\//, '');
   throw new Error(`Meta API error ${e.code ?? res.status}${e.error_subcode ? `/${e.error_subcode}` : ''} on ${where || '/'}: ${e.message || res.statusText}${hint(e)}`);
