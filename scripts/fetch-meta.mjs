@@ -82,7 +82,11 @@ for (const o of await listObjects('ads', 'id,effective_status,creative{thumbnail
 // What each ad set optimises for decides its "result", the same way Ads Manager's Results column does.
 const adsets = {};
 const goalVotes = {};
-for (const o of await listObjects('adsets', 'id,campaign_id,optimization_goal,promoted_object,effective_status')) {
+let adsetList = await listObjects('adsets', 'id,campaign_id,optimization_goal,promoted_object,effective_status');
+if (!adsetList.length) adsetList = await listObjects('adsets', 'id,campaign_id,optimization_goal,effective_status');
+const goalCounts = {};
+for (const o of adsetList) {
+  goalCounts[o.optimization_goal || 'none'] = (goalCounts[o.optimization_goal || 'none'] || 0) + 1;
   const type = resultType(o.optimization_goal, o.promoted_object);
   adsets[o.id] = { goal: o.optimization_goal || null, result_type: type };
   if (!type || !campaigns[o.campaign_id]) continue;
@@ -92,7 +96,37 @@ for (const o of await listObjects('adsets', 'id,campaign_id,optimization_goal,pr
 }
 for (const [cid, votes] of Object.entries(goalVotes)) {
   campaigns[cid].result_type = Object.entries(votes).sort((a, b) => b[1] - a[1])[0][0];
+  campaigns[cid].result_source = 'goal';
 }
+
+// No usable ad set goal (lookup failed or unknown goal): infer from the objective and what the
+// campaign actually recorded, so it never silently falls back to the dashboard-wide picker.
+const recorded = {};
+for (const r of campaignRaw) {
+  const m = (recorded[r.campaign_id] ??= {});
+  for (const a of r.actions || []) m[a.action_type] = (m[a.action_type] || 0) + num(a.value);
+  for (const a of r.video_thruplay_watched_actions || []) m.video_thruplay = (m.video_thruplay || 0) + num(a.value);
+}
+let inferred = 0;
+for (const [cid, c] of Object.entries(campaigns)) {
+  if (c.result_type) continue;
+  const has = (t) => (recorded[cid]?.[t] || 0) > 0;
+  const pick = (...types) => types.find(has);
+  c.result_type = {
+    OUTCOME_LEADS: () => pick('lead', 'onsite_conversion.lead_grouped', 'offsite_conversion.fb_pixel_lead') || 'lead',
+    OUTCOME_SALES: () => pick('offsite_conversion.fb_pixel_purchase', 'purchase', 'omni_purchase', 'offsite_conversion.fb_pixel_complete_registration') || 'purchase',
+    OUTCOME_ENGAGEMENT: () => pick('onsite_conversion.messaging_conversation_started_7d', 'video_thruplay', 'post_engagement') || 'post_engagement',
+    OUTCOME_AWARENESS: () => pick('video_thruplay') || 'reach',
+    OUTCOME_TRAFFIC: () => pick('landing_page_view', 'link_click') || 'link_click',
+    OUTCOME_APP_PROMOTION: () => pick('mobile_app_install', 'app_install') || 'mobile_app_install',
+  }[c.objective]?.() || null;
+  if (c.result_type) { c.result_source = 'objective'; inferred++; }
+}
+const goalMsg = `Ad sets: ${adsetList.length} (${Object.entries(goalCounts).map(([g, n]) => `${g}×${n}`).join(', ') || 'none returned'}) · ` +
+  `campaigns by goal ${Object.values(campaigns).filter((c) => c.result_source === 'goal').length}, by objective ${inferred}, ` +
+  `unresolved ${Object.values(campaigns).filter((c) => !c.result_type).length} · objectives: ${[...new Set(Object.values(campaigns).map((c) => c.objective))].join(', ')}`;
+log(goalMsg);
+if (process.env.GITHUB_ACTIONS) console.log(`::notice title=Result goals::${goalMsg}`);
 
 // Reach isn't additive across days, so fetch it for the preset windows the UI offers —
 // for the account and per campaign (campaigns optimising for reach report it as their result).
@@ -301,7 +335,11 @@ async function listObjects(edge, fields) {
 }
 
 async function optional(label, fn) {
-  try { return await fn(); } catch (err) { log(`  (${label} skipped: ${err.message})`); return null; }
+  try { return await fn(); } catch (err) {
+    log(`  (${label} skipped: ${err.message})`);
+    if (process.env.GITHUB_ACTIONS) console.log(`::warning title=Skipped ${label}::${err.message}`);
+    return null;
+  }
 }
 
 async function getAll(path, params) {
@@ -382,7 +420,7 @@ function fail(msg) {
 }
 function hint(e) {
   if (e.code === 190) return ' → the token is invalid or expired; generate a new system-user token.';
-  if (e.code === 200 || e.code === 10 || e.code === 100 && /permission|access/i.test(e.message || '')) return ' → the system user needs "View performance" on the ad account and the token needs ads_read.';
+  if (e.code === 200 || e.code === 10 || e.code === 100 && /permission/i.test(e.message || '')) return ' → the system user needs "View performance" on the ad account and the token needs ads_read.';
   if (e.code === 2635) return ' → set META_API_VERSION to a newer Graph API version.';
   return '';
 }
