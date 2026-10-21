@@ -4,7 +4,7 @@
 // Env:
 //   META_ACCESS_TOKEN   required — system-user token with ads_read
 //   META_AD_ACCOUNT_ID  required — digits only, e.g. 653083320675538
-//   META_API_VERSION    optional — default v24.0
+//   META_API_VERSION    optional — default v26.0
 //   LOOKBACK_DAYS       optional — default 190 (covers "last 90 days" + its previous period)
 
 import { mkdir, writeFile, readFile } from 'node:fs/promises';
@@ -12,9 +12,13 @@ import { existsSync } from 'node:fs';
 
 await loadDotEnv();
 
+// Any unexpected failure ends up as a readable annotation on the Actions run.
+process.on('uncaughtException', (e) => fail(e?.message || String(e)));
+process.on('unhandledRejection', (e) => fail(e?.message || String(e)));
+
 const TOKEN = process.env.META_ACCESS_TOKEN;
 const ACCOUNT = (process.env.META_AD_ACCOUNT_ID || '').replace(/^act_/, '');
-const VERSION = process.env.META_API_VERSION || 'v24.0';
+const VERSION = process.env.META_API_VERSION || 'v26.0';
 const LOOKBACK = Number(process.env.LOOKBACK_DAYS || 190);
 const CHUNK_DAYS = 30;
 const BASE = `https://graph.facebook.com/${VERSION}`;
@@ -51,33 +55,36 @@ const campaigns = {};
 for (const r of campaignRaw) {
   campaigns[r.campaign_id] ??= { name: r.campaign_name, objective: r.objective || null, status: null };
 }
-await enrich(Object.keys(campaigns), 'name,objective,effective_status', (id, o) => {
-  Object.assign(campaigns[id], { name: o.name, objective: o.objective || campaigns[id].objective, status: o.effective_status });
-});
+for (const o of await listObjects('campaigns', 'id,name,objective,effective_status')) {
+  if (campaigns[o.id]) Object.assign(campaigns[o.id], { name: o.name, objective: o.objective || campaigns[o.id].objective, status: o.effective_status });
+}
 
 const ads = {};
 for (const r of adRaw) {
-  ads[r.ad_id] ??= { name: r.ad_name, adset: r.adset_name, campaign_id: r.campaign_id, status: null, thumb: null, link: null };
+  ads[r.ad_id] ??= {
+    name: r.ad_name, adset: r.adset_name, campaign_id: r.campaign_id, status: null, thumb: null,
+    link: `https://adsmanager.facebook.com/adsmanager/manage/ads?act=${ACCOUNT}&selected_ad_ids=${r.ad_id}`,
+  };
 }
-await enrich(Object.keys(ads), 'effective_status,creative{thumbnail_url,image_url,object_story_spec,effective_object_story_id},preview_shareable_link', (id, o) => {
-  ads[id].status = o.effective_status || null;
-  ads[id].thumb = o.creative?.thumbnail_url || o.creative?.image_url || null;
-  ads[id].link = o.preview_shareable_link || null;
-});
+for (const o of await listObjects('ads', 'id,effective_status,creative{thumbnail_url}')) {
+  if (!ads[o.id]) continue;
+  ads[o.id].status = o.effective_status || null;
+  ads[o.id].thumb = o.creative?.thumbnail_url || null;
+}
 
 // Reach isn't additive across days, so fetch it for the preset windows the UI offers.
 const reach = {};
 for (const preset of ['last_7d', 'last_14d', 'last_30d', 'last_90d', 'this_month', 'last_month']) {
-  const rows = await getAll(`act_${ACCOUNT}/insights`, { level: 'account', date_preset: preset, fields: 'reach,frequency,impressions' });
-  const r = rows[0];
+  const rows = await optional(`reach ${preset}`, () => getAll(`act_${ACCOUNT}/insights`, { level: 'account', date_preset: preset, fields: 'reach,frequency,impressions' }));
+  const r = rows?.[0];
   if (r) reach[preset] = { since: r.date_start, until: r.date_stop, reach: num(r.reach), frequency: num(r.frequency) };
 }
 
 // Names for custom conversions, so "offsite_conversion.custom.123" reads as something human.
 const customConversions = {};
-try {
-  for (const c of await getAll(`act_${ACCOUNT}/customconversions`, { fields: 'id,name', limit: 500 })) customConversions[c.id] = c.name;
-} catch (err) { log(`  (custom conversions skipped: ${err.message})`); }
+for (const c of (await optional('custom conversions', () => getAll(`act_${ACCOUNT}/customconversions`, { fields: 'id,name', limit: 500 }))) || []) {
+  customConversions[c.id] = c.name;
+}
 
 const data = {
   meta: {
@@ -150,19 +157,19 @@ async function insights({ level, fields, breakdowns }) {
   return rows;
 }
 
-async function enrich(ids, fields, apply) {
-  for (let i = 0; i < ids.length; i += 50) {
-    const batch = ids.slice(i, i + 50);
-    try {
-      const res = await get('', { ids: batch.join(','), fields });
-      for (const id of batch) if (res[id]) apply(id, res[id]);
-    } catch (err) {
-      // Deleted objects make the whole batch fail; fall back to one by one.
-      for (const id of batch) {
-        try { apply(id, await get(id, { fields })); } catch { /* deleted — keep insights name */ }
-      }
-    }
-  }
+// Names/status/thumbnails are nice-to-have: if the list call fails, keep the names from insights.
+// Archived objects are only listed when asked for explicitly, so try that first.
+async function listObjects(edge, fields) {
+  const statuses = ['ACTIVE', 'PAUSED', 'ARCHIVED', 'IN_PROCESS', 'WITH_ISSUES', 'CAMPAIGN_PAUSED', 'ADSET_PAUSED',
+    'DISAPPROVED', 'PENDING_REVIEW', 'PREAPPROVED', 'PENDING_BILLING_INFO'];
+  const base = { fields, limit: 200 };
+  const all = await optional(`${edge} (incl. archived)`, () =>
+    getAll(`act_${ACCOUNT}/${edge}`, { ...base, effective_status: JSON.stringify(edge === 'ads' ? statuses : statuses.filter((x) => !/_PAUSED$|APPROV|REVIEW/.test(x))) }));
+  return all ?? (await optional(edge, () => getAll(`act_${ACCOUNT}/${edge}`, base))) ?? [];
+}
+
+async function optional(label, fn) {
+  try { return await fn(); } catch (err) { log(`  (${label} skipped: ${err.message})`); return null; }
 }
 
 async function getAll(path, params) {
@@ -198,7 +205,7 @@ async function request(url, attempt = 1) {
     return request(url, attempt + 1);
   }
   const where = u.pathname.replace(/^\/v[\d.]+\//, '');
-  fail(`Meta API error ${e.code ?? res.status}${e.error_subcode ? `/${e.error_subcode}` : ''} on ${where}: ${e.message || res.statusText}${hint(e)}`);
+  throw new Error(`Meta API error ${e.code ?? res.status}${e.error_subcode ? `/${e.error_subcode}` : ''} on ${where || '/'}: ${e.message || res.statusText}${hint(e)}`);
 }
 
 function todayIn(tz) {
@@ -222,7 +229,7 @@ function fail(msg) {
 function hint(e) {
   if (e.code === 190) return ' → the token is invalid or expired; generate a new system-user token.';
   if (e.code === 200 || e.code === 10 || e.code === 100 && /permission|access/i.test(e.message || '')) return ' → the system user needs "View performance" on the ad account and the token needs ads_read.';
-  if (e.code === 2635 || /deprecated/i.test(e.message || '')) return ' → set META_API_VERSION to a newer Graph API version.';
+  if (e.code === 2635) return ' → set META_API_VERSION to a newer Graph API version.';
   return '';
 }
 

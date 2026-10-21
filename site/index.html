@@ -796,7 +796,7 @@ const DATA = /*__DATA__*/null;
       const a = DATA.ads[id] || {};
       const camp = (DATA.campaigns[a.campaign_id] || {}).name || '';
       const open = () => { if (a.link) window.open(a.link, '_blank', 'noopener'); };
-      return h('tr', { class: 'ad-row', tabindex: a.link ? 0 : null, onclick: open, onkeydown: (e) => { if (e.key === 'Enter') open(); }, title: a.link ? 'Open ad preview' : null, style: a.link ? null : 'cursor:default' },
+      return h('tr', { class: 'ad-row', tabindex: a.link ? 0 : null, onclick: open, onkeydown: (e) => { if (e.key === 'Enter') open(); }, title: a.link ? 'Open in Ads Manager' : null, style: a.link ? null : 'cursor:default' },
         h('td', null,
           a.thumb ? h('img', { class: 'thumb', src: a.thumb, alt: '', loading: 'lazy', referrerpolicy: 'no-referrer' }) : h('span', { class: 'thumb' }),
           h('div', { class: 'name-cell' },
