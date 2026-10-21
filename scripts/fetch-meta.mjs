@@ -51,6 +51,8 @@ const adRaw = await insights({ level: 'ad', fields: ['ad_id', 'ad_name', 'adset_
 const ageGenderRaw = await insights({ level: 'campaign', breakdowns: 'age,gender', fields: ['campaign_id', ...METRICS] });
 const platformRaw = await insights({ level: 'campaign', breakdowns: 'publisher_platform', fields: ['campaign_id', ...METRICS] });
 
+checkFields(campaignRaw);
+
 const campaigns = {};
 for (const r of campaignRaw) {
   campaigns[r.campaign_id] ??= { name: r.campaign_name, objective: r.objective || null, status: null };
@@ -217,9 +219,25 @@ function addDays(d, n) {
   return t.toISOString().slice(0, 10);
 }
 function minDate(a, b) { return a < b ? a : b; }
-function num(v) { const n = Number(v); return Number.isFinite(n) ? n : 0; }
+function num(v) { const n = Number(typeof v === 'string' ? v.replace(/,/g, '') : v); return Number.isFinite(n) ? n : 0; }
 function round(v) { return Math.round(v * 100) / 100; }
 function log(m) { console.log(m); }
+
+// Reports which metric fields Meta actually returned and whether they parse — names and
+// formats only (digits masked), since Actions logs on a public repo are readable by anyone.
+function checkFields(rows) {
+  const keys = new Set(rows.flatMap((r) => Object.keys(r)));
+  const report = ['spend', 'impressions', 'clicks', 'inline_link_clicks'].map((f) => {
+    const present = rows.filter((r) => r[f] != null);
+    const parsed = present.filter((r) => num(r[f]) !== 0);
+    const shape = present.length ? String(present[0][f]).replace(/\d/g, 'd') : '-';
+    return `${f}: present ${present.length}/${rows.length}, non-zero ${parsed.length}, format "${shape}"`;
+  });
+  const msg = `Fields returned: ${[...keys].sort().join(', ')} || ${report.join(' || ')}`;
+  log(msg);
+  const bad = rows.length && rows.every((r) => !num(r.spend));
+  if (process.env.GITHUB_ACTIONS) console.log(`::${bad ? 'warning' : 'notice'} title=Field check::${msg}`);
+}
 
 // Prints a GitHub Actions error annotation (visible on the run page) and exits.
 function fail(msg) {
