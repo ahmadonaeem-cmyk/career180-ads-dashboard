@@ -47,7 +47,7 @@ jobs:
             --template-title "Career180 Meta Ads" \
             --template-instructions "Enter the team password to open the dashboard." \
             --template-button "Open dashboard" \
-            --template-color-primary "#2a78d6" --template-color-secondary "#f9f9f7"
+            --template-color-primary "#562a67" --template-color-secondary "#3b1441"
 
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v4

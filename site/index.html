@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
 <title>Career180 Meta Ads</title>
+<link rel="icon" href="__FAVICON__">
 <style>
 :root {
   color-scheme: light;
@@ -17,16 +18,18 @@
   --grid: #e1e0d9;
   --axis: #c3c2b7;
   --ring: rgba(11, 11, 11, 0.10);
-  --s1: #2a78d6;
+  --s1: #7b3f97;
   --s2: #eb6834;
   --s3: #1baf7a;
-  --s1-wash: rgba(42, 120, 214, 0.10);
+  --s1-wash: rgba(123, 63, 151, 0.10);
   --prev: #b9b8b1;
   --good: #006300;
   --bad: #d03b3b;
   --warn-bg: #fff4d6;
   --warn-ink: #6b4a00;
-  --accent: #2a78d6;
+  --accent: #7b3f97;
+  --brand: #562a67;
+  --brand-deep: #3b1441;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
@@ -40,16 +43,16 @@
     --grid: #2c2c2a;
     --axis: #383835;
     --ring: rgba(255, 255, 255, 0.10);
-    --s1: #3987e5;
+    --s1: #a874c8;
     --s2: #d95926;
     --s3: #199e70;
-    --s1-wash: rgba(57, 135, 229, 0.12);
+    --s1-wash: rgba(168, 116, 200, 0.12);
     --prev: #5a5955;
     --good: #0ca30c;
     --bad: #e66767;
     --warn-bg: #3a2f12;
     --warn-ink: #f3d48a;
-    --accent: #3987e5;
+    --accent: #c39be0;
   }
 }
 :root[data-theme="dark"] {
@@ -63,16 +66,16 @@
   --grid: #2c2c2a;
   --axis: #383835;
   --ring: rgba(255, 255, 255, 0.10);
-  --s1: #3987e5;
+  --s1: #a874c8;
   --s2: #d95926;
   --s3: #199e70;
-  --s1-wash: rgba(57, 135, 229, 0.12);
+  --s1-wash: rgba(168, 116, 200, 0.12);
   --prev: #5a5955;
   --good: #0ca30c;
   --bad: #e66767;
   --warn-bg: #3a2f12;
   --warn-ink: #f3d48a;
-  --accent: #3987e5;
+  --accent: #c39be0;
 }
 
 * { box-sizing: border-box; }
@@ -86,14 +89,23 @@ body {
 .wrap { max-width: 1280px; margin: 0 auto; padding: 24px 16px 48px; }
 @media (min-width: 720px) { .wrap { padding: 32px 28px 64px; } }
 
-header.top { display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: flex-end; justify-content: space-between; margin-bottom: 20px; }
+header.top {
+  display: flex; flex-wrap: wrap; gap: 14px 24px; align-items: center; justify-content: space-between;
+  margin-bottom: 20px; padding: 18px 20px; border-radius: 16px; color: #fff;
+  background: radial-gradient(120% 160% at 30% 20%, var(--brand) 0%, var(--brand-deep) 100%);
+}
+.brand { display: flex; align-items: center; gap: 14px; min-width: 0; }
+.brand img { width: 52px; height: 52px; border-radius: 12px; flex: none; box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.18); }
 header.top h1 { font-size: 22px; line-height: 1.2; margin: 0; font-weight: 650; letter-spacing: -0.01em; }
-header.top .sub { color: var(--ink-2); margin-top: 4px; font-size: 13px; }
+header.top .sub { color: rgba(255, 255, 255, 0.78); margin-top: 3px; font-size: 13px; }
+header.top .pill { background: rgba(255, 255, 255, 0.14); color: #fff; }
+header.top .pill.warn { background: #fff4d6; color: #6b4a00; }
+header.top button.icon { background: rgba(255, 255, 255, 0.10); border-color: rgba(255, 255, 255, 0.22); color: #fff; }
 .top-right { display: flex; gap: 8px; align-items: center; }
 .pill { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; padding: 3px 9px; border-radius: 999px; background: var(--surface-2); color: var(--ink-2); white-space: nowrap; }
 .pill.warn { background: var(--warn-bg); color: var(--warn-ink); }
 button.icon { border: 1px solid var(--ring); background: var(--surface); color: var(--ink-2); border-radius: 8px; height: 32px; padding: 0 10px; cursor: pointer; font: inherit; font-size: 13px; }
-button.icon:hover { color: var(--ink); }
+button.icon:hover { background: rgba(255, 255, 255, 0.2); }
 
 .filters { display: flex; flex-wrap: wrap; gap: 10px 12px; align-items: end; margin-bottom: 20px; }
 .field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
@@ -132,7 +144,7 @@ section { margin-bottom: 16px; }
 
 .tabs { display: flex; flex-wrap: wrap; gap: 4px; background: var(--surface-2); padding: 3px; border-radius: 9px; }
 .tabs button { border: 0; background: transparent; color: var(--ink-2); font: inherit; font-size: 12.5px; padding: 5px 10px; border-radius: 7px; cursor: pointer; }
-.tabs button[aria-pressed="true"] { background: var(--surface); color: var(--ink); font-weight: 600; box-shadow: 0 0 0 1px var(--ring); }
+.tabs button[aria-pressed="true"] { background: var(--surface); color: var(--ink); font-weight: 600; box-shadow: 0 0 0 1px var(--ring), inset 0 -2px 0 var(--accent); }
 
 .legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 12px; color: var(--ink-2); margin-bottom: 8px; }
 .legend .k { display: inline-flex; align-items: center; gap: 6px; }
@@ -179,9 +191,12 @@ footer { color: var(--muted); font-size: 12px; margin-top: 28px; line-height: 1.
 <body>
 <div class="wrap">
   <header class="top">
-    <div>
-      <h1>Career180 · Meta Ads</h1>
-      <div class="sub" id="sub"></div>
+    <div class="brand">
+      <img src="__LOGO__" alt="Career180">
+      <div>
+        <h1>Meta Ads Dashboard</h1>
+        <div class="sub" id="sub"></div>
+      </div>
     </div>
     <div class="top-right">
       <span class="pill" id="freshness"></span>
