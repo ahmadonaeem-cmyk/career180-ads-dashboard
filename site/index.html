@@ -181,6 +181,11 @@ tfoot td { font-weight: 600; border-bottom: 0; }
 a { color: var(--accent); }
 .muted { color: var(--muted); }
 .btn-link { border: 0; background: none; color: var(--accent); font: inherit; font-size: 13px; cursor: pointer; padding: 0; }
+.toggle { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--ink-2); cursor: pointer; user-select: none; }
+.toggle input { accent-color: var(--accent); width: 15px; height: 15px; margin: 0; cursor: pointer; }
+.res { display: flex; flex-direction: column; align-items: flex-end; line-height: 1.25; }
+.res small { font-size: 11px; color: var(--muted); font-variant-numeric: normal; }
+.head-actions { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; }
 
 #tooltip { display: none; }
 .empty { padding: 32px; text-align: center; color: var(--muted); }
@@ -249,9 +254,12 @@ footer { color: var(--muted); font-size: 12px; margin-top: 28px; line-height: 1.
 
   <section class="card">
     <div class="card-head">
-      <h2>Campaigns</h2>
-      <div style="display:flex;gap:14px;align-items:center">
-        <span class="hint">Click a row to filter the dashboard</span>
+      <div>
+        <h2>Campaigns</h2>
+        <div class="hint" style="margin-top:2px">Result = what each campaign optimises for, as in Ads Manager · click a row to filter</div>
+      </div>
+      <div class="head-actions">
+        <label class="toggle"><input type="checkbox" class="active-first"> Active first</label>
         <button class="btn-link" id="csv-btn" type="button">Download CSV</button>
       </div>
     </div>
@@ -276,7 +284,10 @@ footer { color: var(--muted); font-size: 12px; margin-top: 28px; line-height: 1.
   <section class="card">
     <div class="card-head">
       <h2>Ads</h2>
-      <span class="hint" id="ads-hint"></span>
+      <div class="head-actions">
+        <span class="hint" id="ads-hint"></span>
+        <label class="toggle"><input type="checkbox" class="active-first"> Active first</label>
+      </div>
     </div>
     <div class="table-scroll"><table id="ad-table"></table></div>
     <div style="margin-top:12px"><button class="btn-link" id="ads-more" type="button"></button></div>
@@ -324,6 +335,10 @@ const DATA = /*__DATA__*/null;
     'landing_page_view': 'Landing page views',
     'link_click': 'Link clicks',
     'video_view': '3-second video views',
+    'video_thruplay': 'ThruPlays',
+    'video_2s': '2-second video plays',
+    'reach': 'Reach',
+    'impressions': 'Impressions',
     'post_engagement': 'Post engagements',
     'page_engagement': 'Page engagements',
     'post_reaction': 'Reactions',
@@ -395,10 +410,11 @@ const DATA = /*__DATA__*/null;
   function prevOf(r) { const len = daysBetween(r.from, r.to) + 1; return { from: addDays(r.from, -len), to: addDays(r.from, -1), len }; }
 
   // ---------- state (mirrored to the URL hash so views can be shared) ----------
-  const state = { preset: 'last_30d', from: null, to: null, campaign: 'all', result: null, trend: 'spend', bd: 'spend', campSort: ['spend', -1], adSort: ['spend', -1], adsAll: false };
+  const state = { preset: 'last_30d', from: null, to: null, campaign: 'all', result: null, trend: 'spend', bd: 'spend', campSort: ['spend', -1], adSort: ['spend', -1], adsAll: false, activeFirst: true };
   (function readHash() {
     const h = new URLSearchParams(location.hash.slice(1));
     for (const k of ['preset', 'from', 'to', 'campaign', 'result', 'trend', 'bd']) if (h.get(k)) state[k] = h.get(k);
+    if (h.get('active') === '0') state.activeFirst = false;
   })();
   function writeHash() {
     const h = new URLSearchParams();
@@ -407,6 +423,7 @@ const DATA = /*__DATA__*/null;
     if (state.campaign !== 'all') h.set('campaign', state.campaign);
     h.set('result', state.result);
     if (state.trend !== 'spend') h.set('trend', state.trend);
+    if (!state.activeFirst) h.set('active', '0');
     history.replaceState(null, '', '#' + h.toString());
   }
 
@@ -453,6 +470,40 @@ const DATA = /*__DATA__*/null;
       add(map.get(k), row, o, ri);
     }
     for (const t of map.values()) derive(t);
+    return map;
+  }
+
+  // Each campaign/ad counts the result its ad sets optimise for (falls back to the picker's type).
+  const campaignType = (cid) => (DATA.campaigns[cid] || {}).result_type || state.result;
+  const adType = (aid) => {
+    const a = DATA.ads[aid] || {};
+    return ((DATA.adsets || {})[a.adset_id] || {}).result_type || campaignType(a.campaign_id);
+  };
+  function addOwn(map, rows, r, keyFn, campFn, typeOf) {
+    for (const t of map.values()) { t.own = 0; t.ownValue = 0; }
+    for (const row of rows) {
+      if (!inR(row[0], r) || !campOk(campFn(row))) continue;
+      const t = map.get(keyFn(row));
+      if (!t) continue;
+      const type = t.ownType ??= typeOf(keyFn(row));
+      if (type === 'impressions') t.own += row[3];
+      else if (type === 'reach') continue;
+      else {
+        const i = AT.indexOf(type);
+        t.own += i < 0 ? (type === 'link_click' ? row[5] : 0) : (row[6][i] || 0);
+        if (i >= 0) t.ownValue += row[7][i] || 0;
+      }
+    }
+    for (const [k, t] of map) {
+      t.ownType ??= typeOf(k);
+      if (t.ownType === 'reach') {
+        // Unique reach only exists for the preset windows, fetched per campaign.
+        const pr = (DATA.campaign_reach || {})[state.preset];
+        t.own = pr && pr[k] != null ? pr[k] : null;
+      }
+      t.ownCpr = t.own ? t.spend / t.own : null;
+      if (t.ownType === 'reach' || t.ownType === 'impressions') t.ownCpr = t.own ? t.spend / t.own * 1000 : null;
+    }
     return map;
   }
 
@@ -652,7 +703,7 @@ const DATA = /*__DATA__*/null;
     const s1 = css('--s1'), prevC = css('--prev');
     $('#trend-legend').replaceChildren(
       h('span', { class: 'k' }, h('i', { class: 'line', style: `background:${s1}` }), `Selected (${fRange(r)})`),
-      prevOk ? h('span', { class: 'k' }, h('i', { class: 'line', style: `background:${prevC}` }), `Previous (${fRange(p)})`) : null,
+      ...(prevOk ? [h('span', { class: 'k' }, h('i', { class: 'line', style: `background:${prevC}` }), `Previous (${fRange(p)})`)] : []),
     );
     const opts = baseOpts(fmtY);
     opts.scales.x.ticks.callback = function (v) { return fDate(curD[v][0]); };
@@ -733,8 +784,10 @@ const DATA = /*__DATA__*/null;
   // ---------- tables ----------
   const COLS = [
     ['spend', 'Spend', (t) => fmt.money(t.spend)],
-    ['results', null, (t) => fmt.intFull(t.results)],
-    ['cpr', 'Cost / result', (t) => fmt.money2(t.cpr)],
+    ['own', 'Result', (t) => h('span', { class: 'res' }, t.own == null ? '—' : fmt.intFull(t.own),
+      t.ownType ? h('small', null, t.own == null && t.ownType === 'reach' ? 'Reach · preset ranges only' : actionLabel(t.ownType)) : null)],
+    ['ownCpr', 'Cost / result', (t) => h('span', { class: 'res' }, fmt.money2(t.ownCpr),
+      t.ownCpr != null && (t.ownType === 'reach' || t.ownType === 'impressions') ? h('small', null, 'per 1,000') : null)],
     ['link', 'Link clicks', (t) => fmt.intFull(t.link)],
     ['ctr', 'CTR', (t) => fmt.pct(t.ctr)],
     ['cpc', 'CPC', (t) => fmt.money2(t.cpc)],
@@ -742,8 +795,10 @@ const DATA = /*__DATA__*/null;
     ['impr', 'Impressions', (t) => fmt.intFull(t.impr)],
   ];
   function cols(withRoas) { return withRoas ? [...COLS, ['roas', 'ROAS', (t) => fmt.x(t.roas)]] : COLS; }
-  function sortRows(list, [key, dir]) {
+  function sortRows(list, [key, dir], statusOf) {
+    const rank = (o) => (state.activeFirst && statusOf && statusOf(o.id) !== 'ACTIVE' ? 1 : 0);
     return list.sort((a, b) => {
+      if (rank(a) !== rank(b)) return rank(a) - rank(b);
       const x = key === 'name' ? a.name : a.t[key], y = key === 'name' ? b.name : b.t[key];
       if (x == null && y == null) return 0; if (x == null) return 1; if (y == null) return -1;
       return (key === 'name' ? x.localeCompare(y) : x - y) * dir;
@@ -758,7 +813,7 @@ const DATA = /*__DATA__*/null;
         onclick: () => onSort(key), onkeydown: (e) => { if (e.key === 'Enter') onSort(key); },
       }, label);
     };
-    return h('thead', null, h('tr', null, th('name', nameLabel), ...columns.map(([k, l]) => th(k, l || singular(actionLabel(state.result)).replace(/^./, (c) => c.toUpperCase()) + 's'))));
+    return h('thead', null, h('tr', null, th('name', nameLabel), ...columns.map(([k, l]) => th(k, l))));
   }
   function statusMeta(s) {
     if (!s) return null;
@@ -769,14 +824,19 @@ const DATA = /*__DATA__*/null;
 
   let lastCampaignRows = [];
   function renderCampaigns(r, total) {
-    const g = groupBy(R.campaign, r, 2, (row) => row[1], (row) => row[1]);
+    const g = addOwn(groupBy(R.campaign, r, 2, (row) => row[1], (row) => row[1]), R.campaign, r, (row) => row[1], (row) => row[1], campaignType);
     const list = [...g.entries()].filter(([, t]) => t.spend > 0 || t.impr > 0)
       .map(([id, t]) => ({ id, t, name: (DATA.campaigns[id] || {}).name || id }));
-    sortRows(list, state.campSort);
+    sortRows(list, state.campSort, (id) => (DATA.campaigns[id] || {}).status);
     lastCampaignRows = list;
     const withRoas = list.some((x) => x.t.value > 0);
     const columns = cols(withRoas);
     const table = $('#campaign-table');
+    // The total only adds up results when every campaign counts the same thing.
+    const types = new Set(list.map((x) => x.t.ownType));
+    const sameType = types.size === 1 && !types.has('reach') ? [...types][0] : null;
+    const own = sameType ? list.reduce((s, x) => s + x.t.own, 0) : null;
+    total = { ...total, own, ownType: sameType, ownCpr: own ? total.spend / own * (sameType === 'impressions' ? 1000 : 1) : null };
     const maxSpend = Math.max(...list.map((x) => x.t.spend), 1);
     const body = h('tbody', null, list.map(({ id, t, name }) => {
       const c = DATA.campaigns[id] || {};
@@ -795,10 +855,10 @@ const DATA = /*__DATA__*/null;
   }
 
   function renderAds(r) {
-    const g = groupBy(R.ad, r, 2, (row) => row[1], (row) => adCampaign(row[1]));
+    const g = addOwn(groupBy(R.ad, r, 2, (row) => row[1], (row) => adCampaign(row[1])), R.ad, r, (row) => row[1], (row) => adCampaign(row[1]), adType);
     const list = [...g.entries()].filter(([, t]) => t.spend > 0)
       .map(([id, t]) => ({ id, t, name: (DATA.ads[id] || {}).name || id }));
-    sortRows(list, state.adSort);
+    sortRows(list, state.adSort, (id) => (DATA.ads[id] || {}).status);
     const withRoas = list.some((x) => x.t.value > 0);
     const columns = cols(withRoas).filter(([k]) => k !== 'cpm');
     const shown = state.adsAll ? list : list.slice(0, 15);
@@ -823,15 +883,20 @@ const DATA = /*__DATA__*/null;
     if (!list.length) $('#ad-table').replaceChildren(h('tbody', null, h('tr', null, h('td', { class: 'empty' }, 'No ads delivered in this period.'))));
   }
 
+  for (const cb of document.querySelectorAll('.active-first')) {
+    cb.checked = state.activeFirst;
+    cb.addEventListener('change', () => { state.activeFirst = cb.checked; for (const o of document.querySelectorAll('.active-first')) o.checked = cb.checked; render(); });
+  }
+
   $('#csv-btn').addEventListener('click', () => {
     const r = rangeFor(state.preset);
-    const head = ['Campaign', 'Status', 'Objective', 'Spend', actionLabel(state.result), 'Cost per result', 'Link clicks', 'CTR', 'CPC', 'CPM', 'Impressions', 'Purchase value', 'ROAS'];
+    const head = ['Campaign', 'Status', 'Objective', 'Spend', 'Result type', 'Result', 'Cost per result', actionLabel(state.result), 'Link clicks', 'CTR', 'CPC', 'CPM', 'Impressions', 'Purchase value', 'ROAS'];
     const q = (v) => { const s = v == null ? '' : String(v); return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
     const n = (v, d = 2) => v == null ? '' : +v.toFixed(d);
     const lines = [head.map(q).join(',')];
     for (const { id, t, name } of lastCampaignRows) {
       const c = DATA.campaigns[id] || {};
-      lines.push([name, c.status, c.objective, n(t.spend), t.results, n(t.cpr), t.link, n(t.ctr, 4), n(t.cpc), n(t.cpm), t.impr, n(t.value), n(t.roas)].map(q).join(','));
+      lines.push([name, c.status, c.objective, n(t.spend), actionLabel(t.ownType), t.own, n(t.ownCpr), t.results, t.link, n(t.ctr, 4), n(t.cpc), n(t.cpm), t.impr, n(t.value), n(t.roas)].map(q).join(','));
     }
     const blob = new Blob(['﻿' + lines.join('\n')], { type: 'text/csv;charset=utf-8' });
     const a = h('a', { href: URL.createObjectURL(blob), download: `career180-campaigns_${r.from}_${r.to}.csv` });

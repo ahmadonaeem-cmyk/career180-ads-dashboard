@@ -13,7 +13,7 @@ const dates = [...Array(DAYS)].map((_, i) => {
 });
 
 const action_types = ['link_click', 'landing_page_view', 'lead', 'onsite_conversion.lead_grouped',
-  'complete_registration', 'onsite_conversion.messaging_conversation_started_7d', 'video_view', 'post_engagement', 'purchase'];
+  'complete_registration', 'onsite_conversion.messaging_conversation_started_7d', 'video_view', 'post_engagement', 'purchase', 'video_thruplay'];
 const A = Object.fromEntries(action_types.map((t, i) => [t, i]));
 
 const campaigns = {
@@ -52,7 +52,7 @@ dates.forEach((date, di) => {
     if (c.objective === 'OUTCOME_LEADS') { acts[A.lead] = r(results); acts[A['onsite_conversion.lead_grouped']] = r(results * 0.6); }
     if (c.objective === 'OUTCOME_SALES') { acts[A.complete_registration] = r(results * 2.2); acts[A.purchase] = r(results * 0.25); vals[A.purchase] = r(results * 0.25 * 4500); }
     if (c.objective === 'OUTCOME_ENGAGEMENT') acts[A['onsite_conversion.messaging_conversation_started_7d']] = r(results);
-    if (c.objective === 'OUTCOME_AWARENESS') acts[A.video_view] = r(impr * 0.3);
+    if (c.objective === 'OUTCOME_AWARENESS') { acts[A.video_view] = r(impr * 0.3); acts[A.video_thruplay] = r(impr * 0.08); }
     acts[A.post_engagement] = r(impr * 0.03);
     rows.campaign.push([date, cid, +spend.toFixed(2), r(impr), r(clicks), r(link), acts, vals]);
 
@@ -75,6 +75,10 @@ dates.forEach((date, di) => {
 function r(v) { return Math.round(v); }
 function scale(o, f) { const out = {}; for (const k in o) { const v = Math.round(o[k] * f); if (v) out[k] = v; } return out; }
 
+const GOAL_TYPE = { OUTCOME_LEADS: 'lead', OUTCOME_SALES: 'purchase', OUTCOME_ENGAGEMENT: 'onsite_conversion.messaging_conversation_started_7d', OUTCOME_AWARENESS: 'video_thruplay' };
+const adsets = {};
+for (const [cid, c] of Object.entries(campaigns)) { c.result_type = GOAL_TYPE[c.objective]; adsets['s_' + cid] = { goal: null, result_type: c.result_type }; }
+for (const a of Object.values(ads)) a.adset_id = 's_' + a.campaign_id;
 for (const c of Object.values(campaigns)) { delete c.budget; delete c.cpl; delete c.start; delete c.end; }
 for (const a of Object.values(ads)) delete a.w;
 
@@ -87,7 +91,7 @@ const reach = {
 const data = {
   meta: { account_id: '653083320675538', name: 'Career180 (SAMPLE DATA)', currency: 'EGP', timezone: 'Africa/Cairo',
     since: dates[0], until: last, api_version: 'v24.0', generated_at: new Date().toISOString(), sample: true },
-  campaigns, ads, reach, rows, action_types,
+  campaigns, adsets, ads, reach, rows, action_types,
 };
 await mkdir('data', { recursive: true });
 await writeFile('data/sample.json', JSON.stringify(data));

@@ -24,7 +24,8 @@ const BASE = `https://graph.facebook.com/${VERSION}`;
 
 if (!TOKEN || !ACCOUNT) fail('Missing META_ACCESS_TOKEN or META_AD_ACCOUNT_ID (add the repository secret, or see .env.example).');
 
-const METRICS = ['spend', 'impressions', 'clicks', 'inline_link_clicks', 'actions', 'action_values'];
+const METRICS = ['spend', 'impressions', 'clicks', 'inline_link_clicks', 'actions', 'action_values',
+  'video_thruplay_watched_actions', 'video_continuous_2_sec_watched_actions'];
 
 // ---------- main ----------
 
@@ -50,7 +51,7 @@ const MODE = await chooseDailyMode();
 
 // Core rows: [date, id, spend, impressions, clicks, link_clicks, actions{}, values{}]
 const campaignRaw = await insights({ level: 'campaign', fields: ['campaign_id', 'campaign_name', 'objective', ...METRICS] });
-const adRaw = await insights({ level: 'ad', fields: ['ad_id', 'ad_name', 'adset_name', 'campaign_id', ...METRICS] });
+const adRaw = await insights({ level: 'ad', fields: ['ad_id', 'ad_name', 'adset_id', 'adset_name', 'campaign_id', ...METRICS] });
 // Breakdowns keep the campaign id so the campaign filter scopes them too.
 const ageGenderRaw = await insights({ level: 'campaign', breakdowns: 'age,gender', fields: ['campaign_id', ...METRICS] });
 const platformRaw = await insights({ level: 'campaign', breakdowns: 'publisher_platform', fields: ['campaign_id', ...METRICS] });
@@ -68,7 +69,7 @@ for (const o of await listObjects('campaigns', 'id,name,objective,effective_stat
 const ads = {};
 for (const r of adRaw) {
   ads[r.ad_id] ??= {
-    name: r.ad_name, adset: r.adset_name, campaign_id: r.campaign_id, status: null, thumb: null,
+    name: r.ad_name, adset: r.adset_name, adset_id: r.adset_id, campaign_id: r.campaign_id, status: null, thumb: null,
     link: `https://adsmanager.facebook.com/adsmanager/manage/ads?act=${ACCOUNT}&selected_ad_ids=${r.ad_id}`,
   };
 }
@@ -78,12 +79,32 @@ for (const o of await listObjects('ads', 'id,effective_status,creative{thumbnail
   ads[o.id].thumb = o.creative?.thumbnail_url || null;
 }
 
-// Reach isn't additive across days, so fetch it for the preset windows the UI offers.
+// What each ad set optimises for decides its "result", the same way Ads Manager's Results column does.
+const adsets = {};
+const goalVotes = {};
+for (const o of await listObjects('adsets', 'id,campaign_id,optimization_goal,promoted_object,effective_status')) {
+  const type = resultType(o.optimization_goal, o.promoted_object);
+  adsets[o.id] = { goal: o.optimization_goal || null, result_type: type };
+  if (!type || !campaigns[o.campaign_id]) continue;
+  // A campaign takes the goal most of its ad sets use; active ad sets count double.
+  const v = (goalVotes[o.campaign_id] ??= {});
+  v[type] = (v[type] || 0) + (o.effective_status === 'ACTIVE' ? 2 : 1);
+}
+for (const [cid, votes] of Object.entries(goalVotes)) {
+  campaigns[cid].result_type = Object.entries(votes).sort((a, b) => b[1] - a[1])[0][0];
+}
+
+// Reach isn't additive across days, so fetch it for the preset windows the UI offers —
+// for the account and per campaign (campaigns optimising for reach report it as their result).
+const PRESETS = ['last_7d', 'last_14d', 'last_30d', 'last_90d', 'this_month', 'last_month'];
 const reach = {};
-for (const preset of ['last_7d', 'last_14d', 'last_30d', 'last_90d', 'this_month', 'last_month']) {
+const campaignReach = {};
+for (const preset of PRESETS) {
   const rows = await optional(`reach ${preset}`, () => getAll(`act_${ACCOUNT}/insights`, { level: 'account', date_preset: preset, fields: 'reach,frequency,impressions' }));
   const r = rows?.[0];
   if (r) reach[preset] = { since: r.date_start, until: r.date_stop, reach: num(r.reach), frequency: num(r.frequency) };
+  const byCampaign = await optional(`campaign reach ${preset}`, () => getAll(`act_${ACCOUNT}/insights`, { level: 'campaign', date_preset: preset, fields: 'campaign_id,reach', limit: 500 }));
+  if (byCampaign) campaignReach[preset] = Object.fromEntries(byCampaign.map((x) => [x.campaign_id, num(x.reach)]));
 }
 
 // Names for custom conversions, so "offsite_conversion.custom.123" reads as something human.
@@ -104,8 +125,10 @@ const data = {
     generated_at: new Date().toISOString(),
   },
   campaigns,
+  adsets,
   ads,
   reach,
+  campaign_reach: campaignReach,
   rows: {
     campaign: campaignRaw.map((r) => [r.date_start, r.campaign_id, ...core(r)]),
     ad: adRaw.map((r) => [r.date_start, r.ad_id, ...core(r)]),
@@ -129,17 +152,53 @@ log(`Wrote data/data.json (${(json.length / 1024).toFixed(0)} KB): ` +
 function core(r) {
   return [
     num(r.spend), num(r.impressions), num(r.clicks), num(r.inline_link_clicks),
-    packActions(r.actions), packActions(r.action_values),
+    packActions(r.actions, { video_thruplay: r.video_thruplay_watched_actions, video_2s: r.video_continuous_2_sec_watched_actions }),
+    packActions(r.action_values),
   ];
 }
 
-function packActions(list) {
+// Video metrics arrive as separate fields; they're stored as extra "action types" so the
+// dashboard can treat them like any other result.
+function packActions(list, extra = {}) {
   const out = {};
   for (const a of list || []) {
     const v = num(a.value);
     if (v) out[idx(a.action_type)] = round(v);
   }
+  for (const [type, l] of Object.entries(extra)) {
+    const v = (l || []).reduce((s, a) => s + num(a.value), 0);
+    if (v) out[idx(type)] = round(v);
+  }
   return out;
+}
+
+// Maps an ad set's optimization goal to the metric Ads Manager reports as its result.
+function resultType(goal, po = {}) {
+  const PIXEL = {
+    LEAD: 'offsite_conversion.fb_pixel_lead', COMPLETE_REGISTRATION: 'offsite_conversion.fb_pixel_complete_registration',
+    PURCHASE: 'offsite_conversion.fb_pixel_purchase', ADD_TO_CART: 'offsite_conversion.fb_pixel_add_to_cart',
+    INITIATED_CHECKOUT: 'offsite_conversion.fb_pixel_initiate_checkout', CONTENT_VIEW: 'offsite_conversion.fb_pixel_view_content',
+    SEARCH: 'offsite_conversion.fb_pixel_search', CONTACT: 'contact', SUBMIT_APPLICATION: 'submit_application',
+    SCHEDULE: 'schedule', SUBSCRIBE: 'subscribe', START_TRIAL: 'start_trial',
+  };
+  switch (goal) {
+    case 'LEAD_GENERATION': case 'QUALITY_LEAD': return 'lead';
+    case 'OFFSITE_CONVERSIONS': case 'VALUE': case 'CONVERSIONS':
+      if (po?.custom_conversion_id) return `offsite_conversion.custom.${po.custom_conversion_id}`;
+      return PIXEL[po?.custom_event_type] || 'lead';
+    case 'THRUPLAY': return 'video_thruplay';
+    case 'TWO_SECOND_CONTINUOUS_VIDEO_VIEWS': return 'video_2s';
+    case 'VIDEO_VIEWS': return 'video_view';
+    case 'LINK_CLICKS': return 'link_click';
+    case 'LANDING_PAGE_VIEWS': return 'landing_page_view';
+    case 'POST_ENGAGEMENT': return 'post_engagement';
+    case 'PAGE_LIKES': return 'like';
+    case 'CONVERSATIONS': case 'REPLIES': case 'MESSAGING_PURCHASE_CONVERSION': return 'onsite_conversion.messaging_conversation_started_7d';
+    case 'APP_INSTALLS': return 'mobile_app_install';
+    case 'REACH': return 'reach';
+    case 'IMPRESSIONS': case 'AD_RECALL_LIFT': return 'impressions';
+    default: return null;
+  }
 }
 
 function insightParams({ level, fields, breakdowns }) {
@@ -229,11 +288,15 @@ async function chooseDailyMode() {
 // Names/status/thumbnails are nice-to-have: if the list call fails, keep the names from insights.
 // Archived objects are only listed when asked for explicitly, so try that first.
 async function listObjects(edge, fields) {
-  const statuses = ['ACTIVE', 'PAUSED', 'ARCHIVED', 'IN_PROCESS', 'WITH_ISSUES', 'CAMPAIGN_PAUSED', 'ADSET_PAUSED',
-    'DISAPPROVED', 'PENDING_REVIEW', 'PREAPPROVED', 'PENDING_BILLING_INFO'];
+  const statuses = {
+    campaigns: ['ACTIVE', 'PAUSED', 'ARCHIVED', 'IN_PROCESS', 'WITH_ISSUES'],
+    adsets: ['ACTIVE', 'PAUSED', 'ARCHIVED', 'IN_PROCESS', 'WITH_ISSUES', 'CAMPAIGN_PAUSED'],
+    ads: ['ACTIVE', 'PAUSED', 'ARCHIVED', 'IN_PROCESS', 'WITH_ISSUES', 'CAMPAIGN_PAUSED', 'ADSET_PAUSED',
+      'DISAPPROVED', 'PENDING_REVIEW', 'PREAPPROVED', 'PENDING_BILLING_INFO'],
+  }[edge];
   const base = { fields, limit: 200 };
   const all = await optional(`${edge} (incl. archived)`, () =>
-    getAll(`act_${ACCOUNT}/${edge}`, { ...base, effective_status: JSON.stringify(edge === 'ads' ? statuses : statuses.filter((x) => !/_PAUSED$|APPROV|REVIEW/.test(x))) }));
+    getAll(`act_${ACCOUNT}/${edge}`, { ...base, effective_status: JSON.stringify(statuses) }));
   return all ?? (await optional(edge, () => getAll(`act_${ACCOUNT}/${edge}`, base))) ?? [];
 }
 
