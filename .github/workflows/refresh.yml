@@ -14,13 +14,36 @@ permissions:
   contents: write          # keepalive commit only
   pages: write
   id-token: write
+  actions: read            # lets the backup run see whether the first one succeeded
 
 concurrency:
   group: pages
   cancel-in-progress: false
 
 jobs:
+  # The 03:37 run is a backup: if today's scheduled refresh already succeeded, stop here so
+  # the Meta API quota isn't spent twice. Manual and push runs always go ahead.
+  check:
+    runs-on: ubuntu-latest
+    outputs:
+      skip: ${{ steps.check.outputs.skip }}
+    steps:
+      - id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            n=$(gh run list -R "$GITHUB_REPOSITORY" --workflow refresh.yml --event schedule --status success \
+                  --created ">=$(date -u +%F)" --json databaseId --jq length 2>/dev/null || echo 0)
+            if [ "${n:-0}" -gt 0 ]; then
+              echo "skip=true" >> "$GITHUB_OUTPUT"
+              echo "::notice title=Backup run skipped::Today's scheduled refresh already succeeded."
+            fi
+          fi
+
   build:
+    needs: check
+    if: needs.check.outputs.skip != 'true'
     runs-on: ubuntu-latest
     env:
       DASHBOARD_PASSWORD: ${{ secrets.DASHBOARD_PASSWORD }}

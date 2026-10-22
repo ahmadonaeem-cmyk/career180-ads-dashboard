@@ -49,6 +49,13 @@ const idx = (t) => {
 // async report jobs if they agree with the period totals, else from one request per day.
 const MODE = await chooseDailyMode();
 
+// Object lists are few calls but matter for names/goals, so fetch them before the per-day
+// insights use up the hourly request quota.
+const campaignList = await listObjects('campaigns', 'id,name,objective,effective_status');
+let adsetList = await listObjects('adsets', 'id,campaign_id,optimization_goal,promoted_object,effective_status');
+if (!adsetList.length) adsetList = await listObjects('adsets', 'id,campaign_id,optimization_goal,effective_status');
+const adList = await listObjects('ads', 'id,effective_status,creative{thumbnail_url}');
+
 // Core rows: [date, id, spend, impressions, clicks, link_clicks, actions{}, values{}]
 const campaignRaw = await insights({ level: 'campaign', fields: ['campaign_id', 'campaign_name', 'objective', ...METRICS] });
 const adRaw = await insights({ level: 'ad', fields: ['ad_id', 'ad_name', 'adset_id', 'adset_name', 'campaign_id', ...METRICS] });
@@ -62,7 +69,7 @@ const campaigns = {};
 for (const r of campaignRaw) {
   campaigns[r.campaign_id] ??= { name: r.campaign_name, objective: r.objective || null, status: null };
 }
-for (const o of await listObjects('campaigns', 'id,name,objective,effective_status')) {
+for (const o of campaignList) {
   if (campaigns[o.id]) Object.assign(campaigns[o.id], { name: o.name, objective: o.objective || campaigns[o.id].objective, status: o.effective_status });
 }
 
@@ -73,7 +80,7 @@ for (const r of adRaw) {
     link: `https://adsmanager.facebook.com/adsmanager/manage/ads?act=${ACCOUNT}&selected_ad_ids=${r.ad_id}`,
   };
 }
-for (const o of await listObjects('ads', 'id,effective_status,creative{thumbnail_url}')) {
+for (const o of adList) {
   if (!ads[o.id]) continue;
   ads[o.id].status = o.effective_status || null;
   ads[o.id].thumb = o.creative?.thumbnail_url || null;
@@ -82,8 +89,6 @@ for (const o of await listObjects('ads', 'id,effective_status,creative{thumbnail
 // What each ad set optimises for decides its "result", the same way Ads Manager's Results column does.
 const adsets = {};
 const goalVotes = {};
-let adsetList = await listObjects('adsets', 'id,campaign_id,optimization_goal,promoted_object,effective_status');
-if (!adsetList.length) adsetList = await listObjects('adsets', 'id,campaign_id,optimization_goal,effective_status');
 const goalCounts = {};
 for (const o of adsetList) {
   goalCounts[o.optimization_goal || 'none'] = (goalCounts[o.optimization_goal || 'none'] || 0) + 1;
@@ -225,7 +230,8 @@ function resultType(goal, po = {}) {
     case 'VIDEO_VIEWS': return 'video_view';
     case 'LINK_CLICKS': return 'link_click';
     case 'LANDING_PAGE_VIEWS': return 'landing_page_view';
-    case 'POST_ENGAGEMENT': return 'post_engagement';
+    case 'POST_ENGAGEMENT': case 'ENGAGED_USERS': return 'post_engagement';
+    case 'PROFILE_AND_PAGE_ENGAGEMENT': case 'PAGE_ENGAGEMENT': return 'page_engagement';
     case 'PAGE_LIKES': return 'like';
     case 'CONVERSATIONS': case 'REPLIES': case 'MESSAGING_PURCHASE_CONVERSION': return 'onsite_conversion.messaging_conversation_started_7d';
     case 'APP_INSTALLS': return 'mobile_app_install';
@@ -292,7 +298,7 @@ async function perDayInsights(opts, from, to) {
       out[i] = rows.map((r) => ({ ...r, date_start: r.date_start || d }));
     }
   };
-  await Promise.all(Array.from({ length: 5 }, worker));
+  await Promise.all(Array.from({ length: 3 }, worker));
   return out.flat();
 }
 
@@ -373,9 +379,11 @@ async function request(url, attempt = 1, method = 'GET') {
   if (res.ok && !body.error) return body;
 
   const e = body.error || {};
-  const retryable = [1, 2, 4, 17, 341, 613, 80000, 80004].includes(e.code) || res.status >= 500;
-  if (retryable && attempt < 6) {
-    const wait = Math.min(60, 2 ** attempt * 2);
+  // Rate limits (4, 17, 32, 613, 800xx) reset over minutes, so wait longer for those.
+  const rateLimited = [4, 17, 32, 613].includes(e.code) || (e.code >= 80000 && e.code <= 80014);
+  const retryable = rateLimited || [1, 2, 341].includes(e.code) || res.status >= 500;
+  if (retryable && attempt < (rateLimited ? 9 : 6)) {
+    const wait = rateLimited ? Math.min(300, 60 * attempt) : Math.min(60, 2 ** attempt * 2);
     log(`  API ${e.code ?? res.status} (${e.message || res.statusText}) — retrying in ${wait}s`);
     await new Promise((r) => setTimeout(r, wait * 1000));
     return request(url, attempt + 1, method);
