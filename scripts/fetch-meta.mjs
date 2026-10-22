@@ -26,6 +26,9 @@ if (!TOKEN || !ACCOUNT) fail('Missing META_ACCESS_TOKEN or META_AD_ACCOUNT_ID (a
 
 const METRICS = ['spend', 'impressions', 'clicks', 'inline_link_clicks', 'actions', 'action_values',
   'video_thruplay_watched_actions', 'video_continuous_2_sec_watched_actions'];
+// Additive metrics used to check daily rows against Meta's period totals (2% tolerance).
+const CHECK_FIELDS = ['spend', 'impressions', 'inline_link_clicks'];
+const close = (a, b) => a === b || (b > 0 && Math.abs(a - b) / b < 0.02);
 
 // ---------- main ----------
 
@@ -47,7 +50,7 @@ const idx = (t) => {
 // Meta returns 0 spend/impressions/clicks for this account when one synchronous request is
 // split by day (time_increment=1), while period totals are correct. So daily data comes from
 // async report jobs if they agree with the period totals, else from one request per day.
-const MODE = await chooseDailyMode();
+const { mode: MODE, check: CHECK } = await chooseDailyMode();
 
 // Object lists are few calls but matter for names/goals, so fetch them before the per-day
 // insights use up the hourly request quota.
@@ -64,6 +67,7 @@ const ageGenderRaw = await insights({ level: 'campaign', breakdowns: 'age,gender
 const platformRaw = await insights({ level: 'campaign', breakdowns: 'publisher_platform', fields: ['campaign_id', ...METRICS] });
 
 checkFields(campaignRaw);
+verifyDaily(campaignRaw);
 
 const campaigns = {};
 for (const r of campaignRaw) {
@@ -255,9 +259,23 @@ function insightParams({ level, fields, breakdowns }) {
 
 async function insights(opts) {
   const label = `${opts.level}${opts.breakdowns ? ` × ${opts.breakdowns}` : ''}`;
-  const rows = MODE === 'async' ? await asyncInsights(opts, since, until) : await perDayInsights(opts, since, until);
+  let rows = MODE === 'async' ? await asyncInsights(opts, since, until) : await perDayInsights(opts, since, until);
+  let problem = rowProblem(rows, opts);
+  if (problem && MODE === 'async') {
+    log(`  ${label}: async rows unusable (${problem}) — fetching day by day instead`);
+    rows = await perDayInsights(opts, since, until);
+    problem = rowProblem(rows, opts);
+  }
+  if (problem) fail(`${label} rows unusable: ${problem}. Not publishing; the previous dashboard stays live.`);
   log(`  ${label}: ${rows.length} rows (${MODE})`);
   return rows;
+}
+
+// Every row needs its date (and breakdown values), or the dashboard can't place it.
+function rowProblem(rows, opts) {
+  const keys = ['date_start', ...(opts.breakdowns ? opts.breakdowns.split(',') : [])];
+  const missing = keys.filter((k) => rows.some((r) => r[k] == null));
+  return missing.length ? `missing ${missing.join(', ')}` : null;
 }
 
 // Daily rows from async report jobs, ~95 days per job.
@@ -281,7 +299,8 @@ async function runJob(params) {
     await new Promise((r) => setTimeout(r, 4000));
   }
   // The read-back needs the field list again, or it only returns Meta's default columns.
-  return getAll(`${job.report_run_id}/insights`, { fields: params.fields, limit: 500 });
+  // Asking for specific fields drops the date columns unless they're named too.
+  return getAll(`${job.report_run_id}/insights`, { fields: `${params.fields},date_start,date_stop`, limit: 500 });
 }
 
 // One request per day (no time_increment) — slower, but returns correct spend.
@@ -302,27 +321,45 @@ async function perDayInsights(opts, from, to) {
   return out.flat();
 }
 
-// Compares daily rows from an async job with Meta's period totals for the last 14 days.
-async function chooseDailyMode() {
-  if (process.env.DAILY_MODE) return process.env.DAILY_MODE;
-  const from = addDays(until, -14), to = addDays(until, -1);
+// Meta's own totals for the last 14 complete days — the yardstick for the daily rows.
+async function periodTotals(from, to) {
   const opts = { level: 'campaign', fields: ['campaign_id', 'spend', 'impressions', 'inline_link_clicks'] };
-  const totals = await getAll(`act_${ACCOUNT}/insights`, { ...insightParams(opts), time_range: JSON.stringify({ since: from, until: to }) });
+  const rows = await getAll(`act_${ACCOUNT}/insights`, { ...insightParams(opts), time_range: JSON.stringify({ since: from, until: to }) });
+  return Object.fromEntries(CHECK_FIELDS.map((f) => [f, rows.reduce((s, r) => s + num(r[f]), 0)]));
+}
+
+// Uses async daily jobs only if they carry dates and add up to the period totals.
+async function chooseDailyMode() {
+  const from = addDays(until, -14), to = addDays(until, -1);
+  const check = { from, to, totals: await periodTotals(from, to) };
+  if (process.env.DAILY_MODE) return { mode: process.env.DAILY_MODE, check };
+  const opts = { level: 'campaign', fields: ['campaign_id', 'spend', 'impressions', 'inline_link_clicks'] };
   let daily;
   try { daily = await asyncInsights(opts, from, to); } catch (err) {
     log(`Daily mode: per-day (async jobs unavailable: ${err.message})`);
-    return 'per-day';
+    return { mode: 'per-day', check };
   }
-  const sum = (rows, f) => rows.reduce((s, r) => s + num(r[f]), 0);
-  const checks = ['spend', 'impressions', 'inline_link_clicks'].map((f) => {
-    const a = sum(daily, f), b = sum(totals, f);
-    return [f, a === b || (b > 0 && Math.abs(a - b) / b < 0.02)];
-  });
-  const ok = checks.every(([, v]) => v);
-  const msg = `Daily mode: ${ok ? 'async' : 'per-day'} — async daily vs period totals: ${checks.map(([f, v]) => `${f} ${v ? 'match' : 'MISMATCH'}`).join(', ')}`;
+  const checks = CHECK_FIELDS.map((f) => [f, close(daily.reduce((s, r) => s + num(r[f]), 0), check.totals[f])]);
+  const dated = !rowProblem(daily, opts);
+  const ok = dated && checks.every(([, v]) => v);
+  const msg = `Daily mode: ${ok ? 'async' : 'per-day'} — async daily vs period totals: ` +
+    `${checks.map(([f, v]) => `${f} ${v ? 'match' : 'MISMATCH'}`).join(', ')}, dates ${dated ? 'present' : 'MISSING'}`;
   log(msg);
   if (process.env.GITHUB_ACTIONS) console.log(`::notice title=Daily mode::${msg}`);
-  return ok ? 'async' : 'per-day';
+  return { mode: ok ? 'async' : 'per-day', check };
+}
+
+// Final gate: the daily campaign rows must add up to Meta's totals, or nothing is published.
+function verifyDaily(rows) {
+  const { from, to, totals } = CHECK;
+  const inRange = rows.filter((r) => r.date_start >= from && r.date_start <= to);
+  const off = CHECK_FIELDS.filter((f) => !close(inRange.reduce((s, r) => s + num(r[f]), 0), totals[f]));
+  const msg = off.length
+    ? `Daily data doesn't add up to Meta's totals for ${from}…${to} (${off.join(', ')}). Not publishing; the previous dashboard stays live.`
+    : `Daily data matches Meta's totals for ${from}…${to} (spend, impressions, link clicks).`;
+  if (off.length) fail(msg);
+  log(msg);
+  if (process.env.GITHUB_ACTIONS) console.log(`::notice title=Data check::${msg}`);
 }
 
 // Names/status/thumbnails are nice-to-have: if the list call fails, keep the names from insights.
