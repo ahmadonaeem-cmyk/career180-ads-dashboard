@@ -2,7 +2,10 @@ name: Refresh dashboard
 
 on:
   schedule:
-    - cron: '0 4 * * *'   # 04:00 UTC → 06:00/07:00 Cairo
+    # Two runs, off the top of the hour (GitHub delays or drops busy :00 slots), both done
+    # before 7:00 Cairo in summer (UTC+3) and winter (UTC+2). If one is dropped, the other refreshes.
+    - cron: '37 2 * * *'
+    - cron: '37 3 * * *'
   workflow_dispatch:       # "Run workflow" button for an on-demand refresh
   push:
     branches: [main]

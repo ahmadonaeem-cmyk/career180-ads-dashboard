@@ -115,12 +115,14 @@ select, input[type="date"] {
   border: 1px solid var(--ring); border-radius: 8px; height: 34px; padding: 0 10px; max-width: 100%;
 }
 select:focus-visible, input:focus-visible, button:focus-visible, th[tabindex]:focus-visible, tr[tabindex]:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
-.field.campaign select { width: 280px; }
+#preset { width: 170px; }
+.field.campaign select { width: 300px; }
+#result { width: 260px; }
 #custom-range { display: none; gap: 8px; }
 #custom-range.on { display: flex; }
 @media (max-width: 640px) {
   .filters .field { flex: 1 1 100%; }
-  .field.campaign select, .field select { width: 100%; }
+  .field.campaign select, .field select, #preset, #result { width: 100%; }
   #custom-range.on { flex: 1 1 100%; }
   #custom-range .field { flex: 1 1 0; }
 }
@@ -407,7 +409,18 @@ const DATA = /*__DATA__*/null;
       default: return { from: state.from || addDays(YDAY, -29), to: state.to || YDAY };
     }
   }
-  function prevOf(r) { const len = daysBetween(r.from, r.to) + 1; return { from: addDays(r.from, -len), to: addDays(r.from, -1), len }; }
+  // Month presets compare with the matching part of the month before; everything else with the
+  // same number of days immediately before.
+  function prevOf(r) {
+    const len = daysBetween(r.from, r.to) + 1;
+    if (state.preset === 'this_month' || state.preset === 'last_month') {
+      const end = addDays(r.from, -1), start = end.slice(0, 8) + '01';
+      const to = state.preset === 'last_month' ? end : minD(addDays(start, len - 1), end);
+      return { from: start, to, len: daysBetween(start, to) + 1, label: state.preset === 'last_month' ? 'previous month' : 'same days last month' };
+    }
+    return { from: addDays(r.from, -len), to: addDays(r.from, -1), len, label: `previous ${len} day${len > 1 ? 's' : ''}` };
+  }
+  const minD = (a, b) => (a < b ? a : b);
 
   // ---------- state (mirrored to the URL hash so views can be shared) ----------
   const state = { preset: 'last_30d', from: null, to: null, campaign: 'all', result: null, trend: 'spend', bd: 'spend', campSort: ['spend', -1], adSort: ['spend', -1], adsAll: false, activeFirst: true };
@@ -617,7 +630,7 @@ const DATA = /*__DATA__*/null;
   function singular(s) { return s.replace(/\s*\(.*\)$/, '').replace(/ies$/, 'y').replace(/s$/, '').toLowerCase(); }
   function lbl(k) { const l = KPI[k].label; return typeof l === 'function' ? l() : l; }
 
-  function deltaEl(k, curT, prevT, prevLen, prevOk, short) {
+  function deltaEl(k, curT, prevT, prevLabel, prevOk, short) {
     const d = h('div', { class: 'delta' });
     const a = KPI[k].v(curT), b = prevOk && prevT ? KPI[k].v(prevT) : null;
     if (a == null || b == null || b === 0) { d.append(prevOk ? '—' : 'No earlier data'); return d; }
@@ -626,7 +639,7 @@ const DATA = /*__DATA__*/null;
     const flat = Math.abs(ch) < 0.005;
     const cls = flat || dir === 0 ? 'flat' : ((ch > 0) === (dir > 0) ? 'good' : 'bad');
     const arrow = flat ? '→' : (ch > 0 ? '▲' : '▼');
-    d.append(h('span', { class: cls }, `${arrow} ${Math.abs(ch * 100).toFixed(Math.abs(ch) < 0.1 ? 1 : 0)}%`), short ? ' vs prev.' : ` vs previous ${prevLen} day${prevLen > 1 ? 's' : ''}`);
+    d.append(h('span', { class: cls }, `${arrow} ${Math.abs(ch * 100).toFixed(Math.abs(ch) < 0.1 ? 1 : 0)}%`), short ? ' vs prev.' : ` vs ${prevLabel}`);
     return d;
   }
 
@@ -642,7 +655,7 @@ const DATA = /*__DATA__*/null;
       h('div', { class: 'value' }, KPI[k].f(t)),
       (k === 'reach' || k === 'freq')
         ? h('div', { class: 'delta' }, t.reach == null ? (state.campaign === 'all' ? 'Preset ranges only' : 'All campaigns only') : (k === 'reach' ? 'Unique people' : 'Avg. per person'))
-        : deltaEl(k, t, pt, p.len, prevOk, !keys1.includes(k)));
+        : deltaEl(k, t, pt, p.label, prevOk, !keys1.includes(k)));
     $('#kpis-primary').replaceChildren(...keys1.map(tile));
     $('#kpis-secondary').replaceChildren(...keys2.map(tile));
   }

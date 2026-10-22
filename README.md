@@ -2,7 +2,7 @@
 
 A live dashboard for the Career180 Meta ad account (`act_653083320675538`), rebuilt every morning by GitHub Actions and hosted on GitHub Pages.
 
-**How it works.** Every morning at 04:00 UTC, `.github/workflows/refresh.yml` does four things:
+**How it works.** Every morning at 02:37 & 03:37 UTC, `.github/workflows/refresh.yml` does four things:
 
 1. `scripts/fetch-meta.mjs` pulls up to 190 days of daily insights from the Meta Marketing API, at campaign and ad level, plus age/gender and placement breakdowns.
 2. `scripts/build.mjs` puts that data into `site/index.html` and writes one self-contained `dist/index.html`.
